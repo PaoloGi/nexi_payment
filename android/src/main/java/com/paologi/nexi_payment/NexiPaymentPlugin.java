@@ -34,7 +34,9 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
   private static final String TAG = "NEXI_PAYMENT_PLUGIN";
   private MethodChannel channel;
 
-  NexiPaymentPlugin(Activity activity){
+  public NexiPaymentPlugin() {   }
+
+  public NexiPaymentPlugin(Activity activity){
     this.activity = activity;
   }
 
