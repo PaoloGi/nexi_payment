@@ -1,0 +1,9 @@
+.dart_tool/package_config.json
+.idea/.gitignore
+.idea/modules.xml
+.idea/nexi_payment.iml
+.idea/vcs.xml
+.idea/codeStyles/Project.xml
+.idea/libraries/Dart_SDK.xml
+.idea/libraries/Flutter_Plugins.xml
+.idea/
