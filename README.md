@@ -27,9 +27,9 @@ var res = await _nexiPayment.xPayFrontOfficePagaNonce("YOUR_ALIAS", "codTrans", 
 ### WebView payment
 - xPayFrontOfficePaga
 
-<img src="https://github.com/PaoloGi/nexi_payment/blob/master/android_screen_1.jpg" width="400">
+<img src="https://raw.githubusercontent.com/PaoloGi/nexi_payment/master/android_screen_1.jpg" width="400">
 
-<img src="https://github.com/PaoloGi/nexi_payment/blob/master/android_screen_2.jpg" width="400">
+<img src="https://raw.githubusercontent.com/PaoloGi/nexi_payment/master/android_screen_2.jpg" width="400">
 
 
 
