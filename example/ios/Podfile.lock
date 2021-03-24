@@ -1,9 +1,9 @@
 PODS:
   - Flutter (1.0.0)
-  - nexi_payment (0.0.1):
+  - nexi_payment (1.0.0):
     - Flutter
     - Nexi_XPay
-  - Nexi_XPay (1.2.5)
+  - Nexi_XPay (1.2.7)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
@@ -21,9 +21,9 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
-  nexi_payment: e3ad33c3a37d642202308abf5c050fb910277bfc
-  Nexi_XPay: c4a4a05ffcc0a96dd7356c2f87f4b6c605415d0d
+  nexi_payment: 16aa9f86a00369c8b41704f15cf0d0e3ba5998be
+  Nexi_XPay: a6c02960c50edd1a71a49da375ce3c34b50e918c
 
 PODFILE CHECKSUM: c34e2287a9ccaa606aeceab922830efb9a6ff69a
 
-COCOAPODS: 1.9.3
+COCOAPODS: 1.10.0
