@@ -33,7 +33,8 @@ class TestPageState extends State<TestPage> {
   @override
   void initState() {
     super.initState();
-    _nexiPayment = new NexiPayment(secretKey:"_your_secret_key", environment: EnvironmentUtils.TEST);
+    //domain is not mandatory and it is set to https://ecommerce.nexi.it automatically if empty
+    _nexiPayment = new NexiPayment(secretKey:"_your_secret_key", environment: EnvironmentUtils.TEST, domain: "https://ecommerce.nexi.it");
   }
 
 

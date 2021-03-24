@@ -72,8 +72,11 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
                   environment != null && environment.equals("PROD")
                   ? EnvironmentUtils.Environment.PROD
                   : EnvironmentUtils.Environment.TEST);
+          if(domain != null && !domain.isEmpty()){
+            xPay.FrontOffice.setDomain(domain);
+            Log.i(TAG,"xPay.FrontOffice.setDomain set to new domain: " + domain);
+          }
           Log.i(TAG,"XPay initialized");
-          xPay.FrontOffice.setDomain(domain);
           result.success("OK");
         } catch (DeviceRootedException e) {
           e.printStackTrace();
@@ -93,15 +96,12 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
 
   private void payWebView(MethodCall call, final Result result){
     Log.i(TAG,"-*******************--start xPayFrontOfficePaga--*****************--");
-    boolean isTest =  !(call.argument("environment") != null && call.argument("environment").equals("PROD"));
-    String domain =  call.argument("domain");
+//    boolean isTest =  !(call.argument("environment") != null && call.argument("environment").equals("PROD"));
+//    String domain =  (String) call.argument("domain");
     ApiFrontOfficeQPRequest apiFrontOfficeQPRequest = getFrontOfficeRequest(call);
     Log.i(TAG,"ApiFrontOfficeQPRequest initialized");
-    xPay.FrontOffice.setEnvironment(isTest ? EnvironmentUtils.Environment.TEST : EnvironmentUtils.Environment.PROD);
-    if(domain != null && !domain.isEmpty()){
-      xPay.FrontOffice.setDomain(domain);
-      Log.i(TAG,"xPay.FrontOffice.setDomain set to new domain: " + domain);
-    }
+//    xPay.FrontOffice.setEnvironment(isTest ? EnvironmentUtils.Environment.TEST : EnvironmentUtils.Environment.PROD);
+
     FrontOfficeCallbackQP callback = new FrontOfficeCallbackQP() {
       @Override
       public void onConfirm(ApiFrontOfficeQPResponse apiFrontOfficeQPResponse) {
