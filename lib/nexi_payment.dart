@@ -13,23 +13,22 @@ class NexiPayment {
   ///environment type could be: TEST, PROD. Default -> TEST
   String environment = EnvironmentUtils.TEST;
 
-  NexiPayment({@required this.secretKey, this.environment});
+  ///If you like to change the domain of all the HTTP request you must set the domain here (for example: https://newdomain.com)
+  String domain = "";
 
-  //Initialize XPay object with the activity
-  Future<String> _initXPay(String secretKey, String environment) async {
-    var res = await _channel.invokeMethod(
-        "initXPay", {"secretKey": secretKey, "environment": environment});
+  NexiPayment({@required this.secretKey, this.environment, this.domain});
+
+  ///Initialize XPay object with the activity
+  Future<String> _initXPay(String secretKey, String environment, String domain) async {
+    var res = await _channel.invokeMethod("initXPay", {"secretKey": secretKey, "environment": environment, "domain": domain});
     return res;
   }
 
-  //Makes the web view payment and awaits the response
-  Future<String> xPayFrontOfficePaga(
-      String alias, String codTrans, String currency, int amount) async {
-    await _initXPay(secretKey, environment);
-    ApiFrontOfficeQPRequest request =
-        new ApiFrontOfficeQPRequest(alias, codTrans, currency, amount);
-    var res =
-        await _channel.invokeMethod("xPayFrontOfficePaga", request.toMap());
+  ///Makes the web view payment and awaits the response
+  Future<String> xPayFrontOfficePaga(String alias, String codTrans, String currency, int amount) async {
+    await _initXPay(secretKey, environment, domain);
+    ApiFrontOfficeQPRequest request =  ApiFrontOfficeQPRequest(alias, codTrans, currency, amount);
+    var res = await _channel.invokeMethod("xPayFrontOfficePaga", request.toMap());
     return res;
   }
 }

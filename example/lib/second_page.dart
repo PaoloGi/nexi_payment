@@ -1,33 +1,17 @@
+
+
 import 'package:flutter/material.dart';
-import 'package:nexi_payment/nexi_payment.dart';
 import 'package:nexi_payment/models/currency_utils_qp.dart';
 import 'package:nexi_payment/models/environment_utils.dart';
-import 'package:nexi_payment_example/second_page.dart';
+import 'package:nexi_payment/nexi_payment.dart';
 
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatefulWidget {
+class SecondPage extends StatefulWidget {
   @override
-  _MyAppState createState() => _MyAppState();
+  State<StatefulWidget> createState() => SecondPageState();
 }
 
-class _MyAppState extends State<MyApp> {
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: TestPage(),
-    );
-  }
-}
+class SecondPageState extends State<SecondPage> {
 
-class TestPage extends StatefulWidget {
-  @override
-  State<StatefulWidget> createState() => TestPageState();
-}
-
-class TestPageState extends State<TestPage> {
   NexiPayment _nexiPayment;
 
   @override
@@ -36,34 +20,27 @@ class TestPageState extends State<TestPage> {
     _nexiPayment = new NexiPayment(secretKey:"_your_secret_key", environment: EnvironmentUtils.TEST);
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       appBar: AppBar(
-        title: const Text('Plugin example app'),
+        title: const Text('Second Page'),
       ),
       body:Center(
           child: Column(
               mainAxisAlignment:  MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                RaisedButton(child: Text("PAY"), onPressed:  () => _paga("insert_cod_trans") ),
-                RaisedButton(child: Text("GO"), onPressed:  () => Navigator.push<Widget>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SecondPage(),
-                  ),
-                )),
+                RaisedButton(child: Text("PAY"), onPressed:  () => _paga("insert_cod_trans41") ),
               ]
           )
       ) ,
     );
+
   }
 
   void _paga(String codTrans) async {
-    var res = await _nexiPayment.xPayFrontOfficePaga("_your_alias_", codTrans, CurrencyUtilsQP.EUR, 2500);
+    var res = await _nexiPayment.xPayFrontOfficePaga("_your_alias_", codTrans, CurrencyUtilsQP.EUR, 2502);
     openEndPaymentDialog(res);
   }
 
@@ -115,5 +92,6 @@ class TestPageState extends State<TestPage> {
     );
 
   }
+
 
 }
