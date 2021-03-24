@@ -7,3 +7,5 @@
 .idea/libraries/Dart_SDK.xml
 .idea/libraries/Flutter_Plugins.xml
 .idea/
+.dart_tool/package_config_subset
+.dart_tool/version

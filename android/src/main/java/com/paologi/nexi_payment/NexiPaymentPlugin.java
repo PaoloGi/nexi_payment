@@ -62,6 +62,7 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
         Log.i(TAG, "calling initXPay--------------");
         String secretKey = (String) call.argument("secretKey");
         String environment = (String) call.argument("environment");
+        String domain  = (String) call.argument("domain");
         try {
           boolean isNotNull = activity != null;
           Log.i(TAG, "-----------------------activity:" + isNotNull + "--------------");
@@ -71,6 +72,10 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
                   environment != null && environment.equals("PROD")
                   ? EnvironmentUtils.Environment.PROD
                   : EnvironmentUtils.Environment.TEST);
+          if(domain != null && !domain.isEmpty()){
+            xPay.FrontOffice.setDomain(domain);
+            Log.i(TAG,"xPay.FrontOffice.setDomain set to new domain: " + domain);
+          }
           Log.i(TAG,"XPay initialized");
           result.success("OK");
         } catch (DeviceRootedException e) {
@@ -91,10 +96,12 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
 
   private void payWebView(MethodCall call, final Result result){
     Log.i(TAG,"-*******************--start xPayFrontOfficePaga--*****************--");
-    boolean isTest =  !(call.argument("environment") != null && call.argument("environment").equals("PROD"));
+//    boolean isTest =  !(call.argument("environment") != null && call.argument("environment").equals("PROD"));
+//    String domain =  (String) call.argument("domain");
     ApiFrontOfficeQPRequest apiFrontOfficeQPRequest = getFrontOfficeRequest(call);
     Log.i(TAG,"ApiFrontOfficeQPRequest initialized");
-    xPay.FrontOffice.setEnvironment(isTest ? EnvironmentUtils.Environment.TEST : EnvironmentUtils.Environment.PROD);
+//    xPay.FrontOffice.setEnvironment(isTest ? EnvironmentUtils.Environment.TEST : EnvironmentUtils.Environment.PROD);
+
     FrontOfficeCallbackQP callback = new FrontOfficeCallbackQP() {
       @Override
       public void onConfirm(ApiFrontOfficeQPResponse apiFrontOfficeQPResponse) {
