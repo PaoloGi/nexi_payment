@@ -33,8 +33,8 @@ class TestPageState extends State<TestPage> {
   @override
   void initState() {
     super.initState();
-    //domain is not mandatory and it is set to https://ecommerce.nexi.it automatically if empty
-    _nexiPayment = new NexiPayment(secretKey:"_your_secret_key", environment: EnvironmentUtils.TEST, domain: "https://ecommerce.nexi.it");
+    ///domain is not mandatory and it is set to https://ecommerce.nexi.it automatically if empty
+    _nexiPayment = NexiPayment(secretKey:"_your_key", environment: EnvironmentUtils.TEST, domain: "https://ecommerce.nexi.it");
   }
 
 
@@ -50,8 +50,8 @@ class TestPageState extends State<TestPage> {
               mainAxisAlignment:  MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                RaisedButton(child: Text("PAY"), onPressed:  () => _paga("insert_cod_trans") ),
-                RaisedButton(child: Text("GO"), onPressed:  () => Navigator.push<Widget>(
+                RaisedButton(child: Text("PAY"), onPressed:  () => _paga("pagamento-ios test-domain") ),
+                RaisedButton(child: Text("GO to A SECOND PAGE"), onPressed:  () => Navigator.push<Widget>(
                   context,
                   MaterialPageRoute(
                     builder: (context) => SecondPage(),
@@ -64,7 +64,7 @@ class TestPageState extends State<TestPage> {
   }
 
   void _paga(String codTrans) async {
-    var res = await _nexiPayment.xPayFrontOfficePaga("_your_alias_", codTrans, CurrencyUtilsQP.EUR, 2500);
+    var res = await _nexiPayment.xPayFrontOfficePaga("_your_alias", codTrans, CurrencyUtilsQP.EUR, 2500);
     openEndPaymentDialog(res);
   }
 

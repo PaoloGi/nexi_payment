@@ -3,7 +3,7 @@ PODS:
   - nexi_payment (1.0.0):
     - Flutter
     - Nexi_XPay
-  - Nexi_XPay (1.2.7)
+  - Nexi_XPay (1.2.9)
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
@@ -20,10 +20,10 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/nexi_payment/ios"
 
 SPEC CHECKSUMS:
-  Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
+  Flutter: 434fef37c0980e73bb6479ef766c45957d4b510c
   nexi_payment: 16aa9f86a00369c8b41704f15cf0d0e3ba5998be
-  Nexi_XPay: a6c02960c50edd1a71a49da375ce3c34b50e918c
+  Nexi_XPay: 174d542282d512c7417ef54bf11d187cbe7ec153
 
-PODFILE CHECKSUM: c34e2287a9ccaa606aeceab922830efb9a6ff69a
+PODFILE CHECKSUM: aafe91acc616949ddb318b77800a7f51bffa2a4c
 
 COCOAPODS: 1.10.0

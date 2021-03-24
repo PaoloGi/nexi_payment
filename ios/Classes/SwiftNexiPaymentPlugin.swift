@@ -24,14 +24,17 @@ public class SwiftNexiPaymentPlugin: NSObject, FlutterPlugin {
                 let secretKey = myArgs["secretKey"] as? String,
                 let domain = myArgs["domain"] as? String,
                 let environment = myArgs["environment"] as? String {
-
                 do {
                     xPay = try XPay(secretKey: secretKey)
-                    xPay?._FrontOffice.SelectedEnvironment = environment == "PROD" ? EnvironmentUtils.Environment.prod : EnvironmentUtils.Environment.test
-                    if(domain != null && domain != ""){
-                        xPay._FrontOffice.setDomain(domain)
-                        print("xPay._FrontOffice.setDomain TO: " + domain)
+                    
+                    if !(domain ?? "").isEmpty {
+                        xPay?._FrontOffice.setDomain(newUrl:domain ?? "")
                     }
+                    xPay?._FrontOffice.SelectedEnvironment = environment == "PROD" ? EnvironmentUtils.Environment.prod : EnvironmentUtils.Environment.test
+                    
+
+
+
                     result("OK")
                 } catch {
                     print("Jailbroken Device")
