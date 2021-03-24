@@ -1,3 +1,7 @@
+## 1.1.1
+
+* Add xPay.FrontOffice.setDomain method
+
 ## 1.0.0
 
 * Format code, tested on IOS
