@@ -28,93 +28,102 @@ class TestPage extends StatefulWidget {
 }
 
 class TestPageState extends State<TestPage> {
-  NexiPayment _nexiPayment;
+  late NexiPayment _nexiPayment;
 
   @override
   void initState() {
     super.initState();
-    ///domain is not mandatory and it is set to https://ecommerce.nexi.it automatically if empty
-    _nexiPayment = NexiPayment(secretKey:"_your_key", environment: EnvironmentUtils.TEST, domain: "https://ecommerce.nexi.it");
-  }
 
+    ///domain is not mandatory and it is set to https://ecommerce.nexi.it automatically if empty
+    _nexiPayment = NexiPayment(
+        secretKey: "_your_key",
+        environment: EnvironmentUtils.TEST,
+        domain: "https://ecommerce.nexi.it");
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
       appBar: AppBar(
         title: const Text('Plugin example app'),
       ),
-      body:Center(
+      body: Center(
           child: Column(
-              mainAxisAlignment:  MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                RaisedButton(child: Text("PAY"), onPressed:  () => _paga("pagamento-ios test-domain") ),
-                RaisedButton(child: Text("GO to A SECOND PAGE"), onPressed:  () => Navigator.push<Widget>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SecondPage(),
-                  ),
-                )),
-              ]
-          )
-      ) ,
+            ElevatedButton(
+                child: Text("PAY"),
+                onPressed: () => _paga("pagamento-ios test-domain")),
+            ElevatedButton(
+                child: Text("GO to A SECOND PAGE"),
+                onPressed: () => Navigator.push<Widget>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SecondPage(),
+                      ),
+                    )),
+          ])),
     );
   }
 
   void _paga(String codTrans) async {
-    var res = await _nexiPayment.xPayFrontOfficePaga("_your_alias", codTrans, CurrencyUtilsQP.EUR, 2500);
+    var res = await _nexiPayment.xPayFrontOfficePaga(
+        "_your_alias", codTrans, CurrencyUtilsQP.EUR, 2500);
     openEndPaymentDialog(res);
   }
 
-
   openEndPaymentDialog(String response) async {
-
     await showDialog(
       barrierDismissible: false,
       context: context,
       builder: (BuildContext c2) {
         return AlertDialog(
-          title:
-          Container(
+          title: Container(
               margin: EdgeInsets.only(bottom: 10),
-              child: Stack(children: <Widget>[
-
-                Positioned(
-                  bottom: -12,
-                  left: -15,
-                  child: IconButton(
-                      icon: Icon(Icons.arrow_back),
-                      color: Colors.blueAccent,
-                      onPressed: () => Navigator.of(context).pop()),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Container(
-                      margin: EdgeInsets.only(right: 5),
-                      child: Icon(Icons.euro_symbol, color: Colors.black38, size: 25,),
-                    ) ,
-                    Text("Response", style: TextStyle(fontSize: 22, color: Colors.black38, fontWeight: FontWeight.bold),),
-                  ],
-                )
-
-              ],)),
-          content:
-          Column(
+              child: Stack(
+                children: <Widget>[
+                  Positioned(
+                    bottom: -12,
+                    left: -15,
+                    child: IconButton(
+                        icon: Icon(Icons.arrow_back),
+                        color: Colors.blueAccent,
+                        onPressed: () => Navigator.of(context).pop()),
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Container(
+                        margin: EdgeInsets.only(right: 5),
+                        child: Icon(
+                          Icons.euro_symbol,
+                          color: Colors.black38,
+                          size: 25,
+                        ),
+                      ),
+                      Text(
+                        "Response",
+                        style: TextStyle(
+                            fontSize: 22,
+                            color: Colors.black38,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  )
+                ],
+              )),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
-              Text(response, style: TextStyle(color: response == "OK" ? Colors.green : Colors.red))
+              Text(response,
+                  style: TextStyle(
+                      color: response == "OK" ? Colors.green : Colors.red))
             ],
-          )
-          ,
+          ),
         );
-
       },
     );
-
   }
-
 }
