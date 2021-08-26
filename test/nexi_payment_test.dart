@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexi_payment/nexi_payment.dart';
+// import 'package:nexi_payment/nexi_payment.dart';
 
 void main() {
   const MethodChannel channel = MethodChannel('nexi_payment');

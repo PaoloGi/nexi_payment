@@ -9,3 +9,4 @@
 .idea/
 .dart_tool/package_config_subset
 .dart_tool/version
+.packages

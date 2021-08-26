@@ -1,10 +1,10 @@
 class ApiFrontOfficeBaseRequest {
   ///your ALIAS backend provided by nexi
-  String alias;
-  String timeStamp;
-  String mac;
+  late String alias;
+  String? timeStamp;
+  String? mac;
   String clientType = "73c666ab-4146-3bdb-bad6-4f555fafd5fc";
-  Map<String, String> extraKeys;
+  Map<String, String>? extraKeys;
 
   ApiFrontOfficeBaseRequest(this.alias);
 

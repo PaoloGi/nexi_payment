@@ -1,8 +1,8 @@
 import 'api_front_office_base_request.dart';
 
 class ApiFrontOfficeQPRequest extends ApiFrontOfficeBaseRequest {
-  String codTrans;
-  String currency;
+  late String codTrans;
+  late String currency;
   int amount = 0;
 
   ApiFrontOfficeQPRequest(
