@@ -1,3 +1,7 @@
+## 1.2.0
+
+* Add Null Safety (thanks to Federico )
+
 ## 1.1.1
 
 * Add xPay.FrontOffice.setDomain method
