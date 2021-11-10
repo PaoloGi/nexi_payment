@@ -38,7 +38,10 @@ class TestPageState extends State<TestPage> {
 
     ///domain is not mandatory and it is set to https://ecommerce.nexi.it automatically if empty
     _nexiPayment = NexiPayment(
-        secretKey: "_your_key",
+        secretKey: "_your_secret_key_mac",
+        alias: "_your_alias_",
+        gruppo: "_your_group_",
+        currency: CurrencyUtilsQP.EUR,
         environment: EnvironmentUtils.TEST,
         domain: "https://ecommerce.nexi.it");
   }
@@ -74,21 +77,18 @@ class TestPageState extends State<TestPage> {
 
   void _paga(String codTrans) async {
     var res = await _nexiPayment.xPayFrontOfficePaga(
-        alias: "_your_alias",
         codTrans: codTrans,
-        currency: CurrencyUtilsQP.EUR,
         amount: 2500);
     openEndPaymentDialog(res);
   }
 
   void _pagaRicorrente(String codTrans) async {
     var res = await _nexiPayment.xPayFrontOfficePagaSalvaCarta(
-        alias: "_your_alias",
         codTrans: codTrans,
-        currency: CurrencyUtilsQP.EUR,
+        ccExpireingYear: 2020,
+        ccExpiringMonth: 2,
         amount: 2500,
         numContratto: "_num_contratto_univoco_per_cc",
-        gruppo: "_your_gruppo_"
     );
     openEndPaymentDialog(res);
   }

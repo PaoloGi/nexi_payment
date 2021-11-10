@@ -16,10 +16,13 @@ import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
+import it.nexi.xpay.CallBacks.ApiResponseCallback;
 import it.nexi.xpay.CallBacks.FrontOfficeCallbackQP;
 import it.nexi.xpay.Models.WebApi.Errors.ApiErrorResponse;
 import it.nexi.xpay.Models.WebApi.Requests.FrontOffice.ApiFrontOfficeQPRequest;
+import it.nexi.xpay.Models.WebApi.Requests.Ricorrenze.ApiPagamentoRicorrenteRequest;
 import it.nexi.xpay.Models.WebApi.Responses.FrontOffice.ApiFrontOfficeQPResponse;
+import it.nexi.xpay.Models.WebApi.Responses.Ricorrenze.ApiPagamentoRicorrenteResponse;
 import it.nexi.xpay.Utils.EnvironmentUtils;
 import it.nexi.xpay.Utils.Exceptions.DeviceRootedException;
 import it.nexi.xpay.Utils.Exceptions.MacException;
@@ -98,86 +101,85 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
 
   private void payWebViewSalvaCarta(MethodCall call, final Result result){
     Log.i(TAG,"-*******************--start xPayFrontOfficePagaSalvaCarta--*****************--");
-//    boolean isTest =  !(call.argument("environment") != null && call.argument("environment").equals("PROD"));
-//    String domain =  (String) call.argument("domain");
     ApiFrontOfficeQPRequest apiFrontOfficeQPRequest = getFrontOfficeRequestRecurrent(call);
 
-
-//    xPay.PrimiPagamentiRecurring = new PrimiPagamentiRecurring(activity);
-//    ApiCreaNoncePrimoPagamento3DSRequest apiCreaNoncePrimoPagamento3DSRequest =
-//            new ApiCreaNoncePrimoPagamento3DSRequest(
-//                    apiFrontOfficeQPRequest.getAlias(),
-//
-//            );
-//    xPay.PrimiPagamentiRecurring.creaNoncePrimoPagamento3DS();
-//
-//    Calendar c = Calendar.getInstance();
-//    c.add(Calendar.YEAR, 5);
-//
-//    ApiPrimoPagamento3DSRequest apiPrimoPagamento3DSRequest = new ApiPrimoPagamento3DSRequest(
-//            apiFrontOfficeQPRequest.getAlias(),
-//            apiFrontOfficeQPRequest.getExtraKeys().get("num_contratto"),
-//            apiFrontOfficeQPRequest.getExtraKeys().get("gruppo"),
-//            apiFrontOfficeQPRequest.getCodTrans(),
-//            apiFrontOfficeQPRequest.getAmount(),
-//            Integer.parseInt(apiFrontOfficeQPRequest.getCurrency()),
-//            "nonce",
-//            c.getTime(),
-//            apiFrontOfficeQPRequest.getExtraKeys().get("email"),
-//            apiFrontOfficeQPRequest.getExtraKeys().get("description"),
-//            apiFrontOfficeQPRequest.getExtraKeys().get("taxCode")
-//    );
-//    xPay.PrimiPagamentiRecurring.primoPagamento3DS(
-//            apiPrimoPagamento3DSRequest,
-//            new ApiResponseCallback<ApiPrimoPagamento3DSResponse>() {
-//              @Override
-//              public void onSuccess(ApiPrimoPagamento3DSResponse response) {
-//
-//              }
-//
-//              @Override
-//              public void onError(ApiErrorResponse error) {
-//                Log.i(TAG, "Error: " +error.getError().getMessage());
-//                result.error(error.getError().getCode(), error.getError().getMessage(), error.getError().toString());
-//              }
-//
-//            }
-//    );
+    ApiPagamentoRicorrenteRequest apiPagamentoRicorrenteRequest = new ApiPagamentoRicorrenteRequest(
+            apiFrontOfficeQPRequest.getAlias(),
+            apiFrontOfficeQPRequest.getExtraKeys().get("num_contratto"),
+            apiFrontOfficeQPRequest.getCodTrans(),
+            apiFrontOfficeQPRequest.getAmount(),
+            978, //only EUR admitted
+            Integer.parseInt(call.<HashMap<String, String>>argument("extraKeys").get("month")),
+            Integer.parseInt(call.<HashMap<String, String>>argument("extraKeys").get("year")),
+            apiFrontOfficeQPRequest.getExtraKeys().get("gruppo")
+    );
+    apiPagamentoRicorrenteRequest.setMac(call.argument("mac").toString());
 
     Log.i(TAG,"ApiFrontOfficeQPRequest initialized");
-//    xPay.FrontOffice.setEnvironment(isTest ? EnvironmentUtils.Environment.TEST : EnvironmentUtils.Environment.PROD);
 
-    FrontOfficeCallbackQP callback = new FrontOfficeCallbackQP() {
-      @Override
-      public void onConfirm(ApiFrontOfficeQPResponse apiFrontOfficeQPResponse) {
-        if(apiFrontOfficeQPResponse.isValid()) {
-          result.success("OK");
-          Log.i(TAG, "QP Payment successful with circuit card: " +apiFrontOfficeQPResponse.getBrand());
-        } else {
-          String message = "Auth Denied";
-          if (apiFrontOfficeQPResponse.getError() != null) {
-            message = apiFrontOfficeQPResponse.getError().getMessage();
+
+    if(call.<HashMap<String, String>>argument("extraKeys").get("tipo_richiesta").equals("PP")){
+
+      xPay.FrontOffice.paga(apiFrontOfficeQPRequest, true,  new FrontOfficeCallbackQP() {
+        @Override
+        public void onConfirm(ApiFrontOfficeQPResponse apiFrontOfficeQPResponse) {
+          if(apiFrontOfficeQPResponse.isValid()) {
+            result.success("OK");
+            Log.i(TAG, "QP Payment successful with circuit card: " +apiFrontOfficeQPResponse.getBrand());
+          } else {
+            String message = "Auth Denied";
+            if (apiFrontOfficeQPResponse.getError() != null) {
+              message = apiFrontOfficeQPResponse.getError().getMessage();
+            }
+            Log.i(TAG, "QP Payment error: " + message);
+            result.success("QP Payment error: " + message);
           }
-          Log.i(TAG, "QP Payment error: " + message);
-          result.success("QP Payment error: " + message);
         }
-      }
 
-      @Override
-      public void onError(ApiErrorResponse error) {
-        Log.i(TAG, "Error: " +error.getError().getMessage());
-        result.error(error.getError().getCode(), error.getError().getMessage(), error.getError().toString());
-      }
+        @Override
+        public void onError(ApiErrorResponse error) {
+          Log.i(TAG, "Error: " +error.getError().getMessage());
+          result.error(error.getError().getCode(), error.getError().getMessage(), error.getError().toString());
+        }
 
-      @Override
-      public void onCancel(ApiFrontOfficeQPResponse apiFrontOfficeQPResponse) {
-        Log.i(TAG, "Operation canceled by the user");
-        result.success("Operation canceled by the user");
-      }
-    };
+        @Override
+        public void onCancel(ApiFrontOfficeQPResponse apiFrontOfficeQPResponse) {
+          Log.i(TAG, "Operation canceled by the user");
+          result.success("Operation canceled by the user");
+        }
+      });
+    }
+    else{
+      xPay.Ricorrenze.pagamentoRicorrente(apiPagamentoRicorrenteRequest, new ApiResponseCallback<ApiPagamentoRicorrenteResponse>() {
+        @Override
+        public void onSuccess(ApiPagamentoRicorrenteResponse response) {
+          if(response.isSuccess()) {
+            result.success("OK");
+            Log.i(TAG, "QP Payment successful with circuit card: " +response.getBrand());
+          } else {
+            String message = "Auth Denied";
+            if (response.getError() != null) {
+              message = response.getError().getMessage();
+            }
+            Log.i(TAG, "QP Payment error: " + message);
+            result.success("QP Payment error: " + message);
+          }
+        }
 
-    xPay.FrontOffice.paga(apiFrontOfficeQPRequest, true, callback);
+        @Override
+        public void onError(ApiErrorResponse error) {
+          Log.i(TAG, "Error: " +error.getError().getMessage());
+          result.error(error.getError().getCode(), error.getError().getMessage(), error.getError().toString());
+        }
+      });
+    }
+
+
   }
+
+
+
+
 
 
 

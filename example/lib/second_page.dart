@@ -14,8 +14,13 @@ class SecondPageState extends State<SecondPage> {
   @override
   void initState() {
     super.initState();
-    _nexiPayment = new NexiPayment(
-        secretKey: "_your_secret_key", environment: EnvironmentUtils.TEST);
+    _nexiPayment = NexiPayment(
+        secretKey: "_your_key",
+        alias: "_your_alias",
+        gruppo: "_your_gruppo_",
+        currency: CurrencyUtilsQP.EUR,
+        environment: EnvironmentUtils.TEST,
+        domain: "https://ecommerce.nexi.it");
   }
 
   @override
@@ -38,9 +43,7 @@ class SecondPageState extends State<SecondPage> {
 
   void _paga(String codTrans) async {
     var res = await _nexiPayment.xPayFrontOfficePaga(
-        alias: "_your_alias_",
         codTrans: codTrans,
-        currency: CurrencyUtilsQP.EUR,
         amount: 2502);
     openEndPaymentDialog(res);
   }
