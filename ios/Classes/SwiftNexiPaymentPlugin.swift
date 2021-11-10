@@ -83,7 +83,7 @@ public class SwiftNexiPaymentPlugin: NSObject, FlutterPlugin {
             apiFrontOfficeQPRequest.ExtraParameters["num_contratto"] = extraKeys["num_contratto"] as? String;
             apiFrontOfficeQPRequest.ExtraParameters["gruppo"] = extraKeys["gruppo"] as? String;
 
-            let apiPagamentoRicorrenteRequest ApiPagamentoRicorrenteRequest(
+            let apiPagamentoRicorrenteRequest = ApiPagamentoRicorrenteRequest(
                 alias: alias,
                 nContract: extraKeys["num_contratto"] as? String,
                 codTrans: codTrans,
@@ -93,7 +93,7 @@ public class SwiftNexiPaymentPlugin: NSObject, FlutterPlugin {
                 year: Int(extraKeys["year"] as? String),
                 groupCode: extraKeys["gruppo"] as? String
             )
-
+            
             if((extraKeys["tipo_richiesta"] as? String) == "PP"){
                 xPay?._FrontOffice.paga(apiFrontOfficeQPRequest, navigation: true, parentController: rootViewController, completionHandler: { response in
                     self.handleFrontOffice(response, result: result)
@@ -161,10 +161,6 @@ public class SwiftNexiPaymentPlugin: NSObject, FlutterPlugin {
 
         var message = "Payment was canceled by user"
         if response.IsSuccess {
-            if !response.IsCanceled {
-                message = "Payment was successful with the circuit \(response.Brand!)"
-                result("OK")
-            }
             result("Cancelled by the user")
 
         } else {
