@@ -38,7 +38,10 @@ class SecondPageState extends State<SecondPage> {
 
   void _paga(String codTrans) async {
     var res = await _nexiPayment.xPayFrontOfficePaga(
-        "_your_alias_", codTrans, CurrencyUtilsQP.EUR, 2502);
+        alias: "_your_alias_",
+        codTrans: codTrans,
+        currency: CurrencyUtilsQP.EUR,
+        amount: 2502);
     openEndPaymentDialog(res);
   }
 

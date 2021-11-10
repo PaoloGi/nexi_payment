@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:nexi_payment/nexi_payment.dart';
 import 'package:nexi_payment/models/currency_utils_qp.dart';
@@ -54,7 +56,10 @@ class TestPageState extends State<TestPage> {
               children: <Widget>[
             ElevatedButton(
                 child: Text("PAY"),
-                onPressed: () => _paga("pagamento-ios test-domain")),
+                onPressed: () => _paga("pagamento - test n°${DateTime.now().millisecondsSinceEpoch}")),
+            ElevatedButton(
+                child: Text("SAVE CARD PAY"),
+                onPressed: () => _pagaRicorrente("pagamento - test n°${DateTime.now().millisecondsSinceEpoch}")),
             ElevatedButton(
                 child: Text("GO to A SECOND PAGE"),
                 onPressed: () => Navigator.push<Widget>(
@@ -69,7 +74,22 @@ class TestPageState extends State<TestPage> {
 
   void _paga(String codTrans) async {
     var res = await _nexiPayment.xPayFrontOfficePaga(
-        "_your_alias", codTrans, CurrencyUtilsQP.EUR, 2500);
+        alias: "_your_alias",
+        codTrans: codTrans,
+        currency: CurrencyUtilsQP.EUR,
+        amount: 2500);
+    openEndPaymentDialog(res);
+  }
+
+  void _pagaRicorrente(String codTrans) async {
+    var res = await _nexiPayment.xPayFrontOfficePagaSalvaCarta(
+        alias: "_your_alias",
+        codTrans: codTrans,
+        currency: CurrencyUtilsQP.EUR,
+        amount: 2500,
+        numContratto: "_num_contratto_univoco_per_cc",
+        gruppo: "_your_gruppo_"
+    );
     openEndPaymentDialog(res);
   }
 

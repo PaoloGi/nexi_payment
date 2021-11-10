@@ -1,23 +1,21 @@
 package com.paologi.nexi_payment;
 
 import android.app.Activity;
-import android.content.Context;
 
 import androidx.annotation.NonNull;
 
 import java.io.UnsupportedEncodingException;
+import java.util.HashMap;
 
 import io.flutter.Log;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
-import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
-import io.flutter.plugin.platform.PlatformViewRegistry;
 import it.nexi.xpay.CallBacks.FrontOfficeCallbackQP;
 import it.nexi.xpay.Models.WebApi.Errors.ApiErrorResponse;
 import it.nexi.xpay.Models.WebApi.Requests.FrontOffice.ApiFrontOfficeQPRequest;
@@ -88,11 +86,100 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
         Log.i(TAG, "calling xPayFrontOfficePaga--------------");
         payWebView(call, result);
         break;
+      case "xPayFrontOfficePagaSalvaCarta":
+        Log.i(TAG, "calling xPayFrontOfficePagaSalvaCarta--------------");
+        payWebViewSalvaCarta(call, result);
+        break;
       default:
         result.notImplemented();
         break;
     }
   }
+
+  private void payWebViewSalvaCarta(MethodCall call, final Result result){
+    Log.i(TAG,"-*******************--start xPayFrontOfficePagaSalvaCarta--*****************--");
+//    boolean isTest =  !(call.argument("environment") != null && call.argument("environment").equals("PROD"));
+//    String domain =  (String) call.argument("domain");
+    ApiFrontOfficeQPRequest apiFrontOfficeQPRequest = getFrontOfficeRequestRecurrent(call);
+
+
+//    xPay.PrimiPagamentiRecurring = new PrimiPagamentiRecurring(activity);
+//    ApiCreaNoncePrimoPagamento3DSRequest apiCreaNoncePrimoPagamento3DSRequest =
+//            new ApiCreaNoncePrimoPagamento3DSRequest(
+//                    apiFrontOfficeQPRequest.getAlias(),
+//
+//            );
+//    xPay.PrimiPagamentiRecurring.creaNoncePrimoPagamento3DS();
+//
+//    Calendar c = Calendar.getInstance();
+//    c.add(Calendar.YEAR, 5);
+//
+//    ApiPrimoPagamento3DSRequest apiPrimoPagamento3DSRequest = new ApiPrimoPagamento3DSRequest(
+//            apiFrontOfficeQPRequest.getAlias(),
+//            apiFrontOfficeQPRequest.getExtraKeys().get("num_contratto"),
+//            apiFrontOfficeQPRequest.getExtraKeys().get("gruppo"),
+//            apiFrontOfficeQPRequest.getCodTrans(),
+//            apiFrontOfficeQPRequest.getAmount(),
+//            Integer.parseInt(apiFrontOfficeQPRequest.getCurrency()),
+//            "nonce",
+//            c.getTime(),
+//            apiFrontOfficeQPRequest.getExtraKeys().get("email"),
+//            apiFrontOfficeQPRequest.getExtraKeys().get("description"),
+//            apiFrontOfficeQPRequest.getExtraKeys().get("taxCode")
+//    );
+//    xPay.PrimiPagamentiRecurring.primoPagamento3DS(
+//            apiPrimoPagamento3DSRequest,
+//            new ApiResponseCallback<ApiPrimoPagamento3DSResponse>() {
+//              @Override
+//              public void onSuccess(ApiPrimoPagamento3DSResponse response) {
+//
+//              }
+//
+//              @Override
+//              public void onError(ApiErrorResponse error) {
+//                Log.i(TAG, "Error: " +error.getError().getMessage());
+//                result.error(error.getError().getCode(), error.getError().getMessage(), error.getError().toString());
+//              }
+//
+//            }
+//    );
+
+    Log.i(TAG,"ApiFrontOfficeQPRequest initialized");
+//    xPay.FrontOffice.setEnvironment(isTest ? EnvironmentUtils.Environment.TEST : EnvironmentUtils.Environment.PROD);
+
+    FrontOfficeCallbackQP callback = new FrontOfficeCallbackQP() {
+      @Override
+      public void onConfirm(ApiFrontOfficeQPResponse apiFrontOfficeQPResponse) {
+        if(apiFrontOfficeQPResponse.isValid()) {
+          result.success("OK");
+          Log.i(TAG, "QP Payment successful with circuit card: " +apiFrontOfficeQPResponse.getBrand());
+        } else {
+          String message = "Auth Denied";
+          if (apiFrontOfficeQPResponse.getError() != null) {
+            message = apiFrontOfficeQPResponse.getError().getMessage();
+          }
+          Log.i(TAG, "QP Payment error: " + message);
+          result.success("QP Payment error: " + message);
+        }
+      }
+
+      @Override
+      public void onError(ApiErrorResponse error) {
+        Log.i(TAG, "Error: " +error.getError().getMessage());
+        result.error(error.getError().getCode(), error.getError().getMessage(), error.getError().toString());
+      }
+
+      @Override
+      public void onCancel(ApiFrontOfficeQPResponse apiFrontOfficeQPResponse) {
+        Log.i(TAG, "Operation canceled by the user");
+        result.success("Operation canceled by the user");
+      }
+    };
+
+    xPay.FrontOffice.paga(apiFrontOfficeQPRequest, true, callback);
+  }
+
+
 
   private void payWebView(MethodCall call, final Result result){
     Log.i(TAG,"-*******************--start xPayFrontOfficePaga--*****************--");
@@ -140,6 +227,20 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
   @Override
   public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
     channel.setMethodCallHandler(null);
+  }
+
+  public static ApiFrontOfficeQPRequest getFrontOfficeRequestRecurrent(MethodCall call)  {
+    ApiFrontOfficeQPRequest apiFrontOfficeQPRequest = null;
+    apiFrontOfficeQPRequest = getFrontOfficeRequest(call);
+    apiFrontOfficeQPRequest.addExtraKey("tipo_servizio","paga_oc3d");
+    apiFrontOfficeQPRequest.addExtraKey("tipo_richiesta", call.<HashMap<String, String>>argument("extraKeys").get("tipo_richiesta"));
+    apiFrontOfficeQPRequest.addExtraKey("num_contratto",call.<HashMap<String, String>>argument("extraKeys").get("num_contratto"));
+    if(call.<HashMap<String, String>>argument("extraKeys").get("gruppo") != null
+        && !call.<HashMap<String, String>>argument("extraKeys").get("gruppo").isEmpty()){
+      apiFrontOfficeQPRequest.addExtraKey("gruppo",call.<HashMap<String, String>>argument("extraKeys").get("gruppo"));
+    }
+
+    return apiFrontOfficeQPRequest;
   }
 
   public static ApiFrontOfficeQPRequest getFrontOfficeRequest(MethodCall call)  {

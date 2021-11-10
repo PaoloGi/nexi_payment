@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:nexi_payment/models/environment_utils.dart';
+import 'package:nexi_payment/utils/storage_wrapper.dart';
 import 'models/api_front_office_qp_request.dart';
 
 class NexiPayment {
@@ -14,6 +15,8 @@ class NexiPayment {
 
   ///If you like to change the domain of all the HTTP request you must set the domain here (for example: https://newdomain.com)
   String domain;
+
+  Map<String, String> extraKeys = Map();
 
   NexiPayment({
     required this.secretKey,
@@ -29,9 +32,55 @@ class NexiPayment {
     return res;
   }
 
+
+
   ///Makes the web view payment and awaits the response
-  Future<String> xPayFrontOfficePaga(
-      String alias, String codTrans, String currency, int amount) async {
+  Future<String> xPayFrontOfficePagaSalvaCarta({
+          required String alias,
+          required String codTrans,
+          required String currency,
+          required int amount,
+          required String numContratto,
+          String? tipoRichiesta,
+          String? gruppo
+      }) async {
+    await _initXPay(secretKey, environment, domain);
+    ApiFrontOfficeQPRequest request = ApiFrontOfficeQPRequest(alias, codTrans, currency, amount);
+    request.extraKeys = Map();
+
+    ///forcing save tipoRichiesta if is PR
+    if(tipoRichiesta != null && tipoRichiesta == "PR"){
+      await StorageWrapper.setData(key: numContratto+"_tipo_richiesta", data: "PR");
+    }
+
+    final String? tipoRichiestaSalvata = await StorageWrapper.getData(key: numContratto+"_tipo_richiesta");
+    if(tipoRichiestaSalvata == null){
+      request.extraKeys = {"tipo_richiesta": "PP", "num_contratto": numContratto};
+    }
+    else{
+      request.extraKeys = {"tipo_richiesta": tipoRichiestaSalvata, "num_contratto": numContratto};
+    }
+
+    if(gruppo != null){
+      request.extraKeys!["gruppo"] = gruppo;
+    }
+
+    var res = await _channel.invokeMethod("xPayFrontOfficePagaSalvaCarta", request.toMap());
+    
+    ///saving the states of request type
+    if(res == "OK" && tipoRichiestaSalvata == null || tipoRichiestaSalvata == "PP"){
+      await StorageWrapper.setData(key: numContratto+"_tipo_richiesta", data: "PR");
+    }
+
+    return res;
+  }
+
+  ///Makes the web view payment and awaits the response
+  Future<String> xPayFrontOfficePaga({
+    required String alias,
+    required String codTrans,
+    required String currency,
+    required int amount}) async {
     await _initXPay(secretKey, environment, domain);
     ApiFrontOfficeQPRequest request =
         ApiFrontOfficeQPRequest(alias, codTrans, currency, amount);
