@@ -83,9 +83,29 @@ public class SwiftNexiPaymentPlugin: NSObject, FlutterPlugin {
             apiFrontOfficeQPRequest.ExtraParameters["num_contratto"] = extraKeys["num_contratto"] as? String;
             apiFrontOfficeQPRequest.ExtraParameters["gruppo"] = extraKeys["gruppo"] as? String;
 
-            xPay?._FrontOffice.paga(apiFrontOfficeQPRequest, navigation: true, parentController: rootViewController, completionHandler: { response in
-                self.handleFrontOffice(response, result: result)
-            })
+            let apiPagamentoRicorrenteRequest ApiPagamentoRicorrenteRequest(
+                alias: alias,
+                nContract: extraKeys["num_contratto"] as? String,
+                codTrans: codTrans,
+                amount: amount,
+                currency: 978,
+                month: Int(extraKeys["month"] as? String),
+                year: Int(extraKeys["year"] as? String),
+                groupCode: extraKeys["gruppo"] as? String
+            )
+
+            if((extraKeys["tipo_richiesta"] as? String) == "PP"){
+                xPay?._FrontOffice.paga(apiFrontOfficeQPRequest, navigation: true, parentController: rootViewController, completionHandler: { response in
+                    self.handleFrontOffice(response, result: result)
+                })
+            }
+            else{
+                xPay?._Ricorrenze.pagamentoRicorrente(apiPagamentoRicorrenteRequest, parentController: rootViewController, completionHandler: { response in
+                    self.handleFrontOffice(response, result: result)
+                })
+            }
+
+
 
         } else {
             result(FlutterError(code: "-1", message: "iOS could not extract " +
@@ -123,6 +143,24 @@ public class SwiftNexiPaymentPlugin: NSObject, FlutterPlugin {
 
         var message = "Payment was canceled by user"
         if response.IsValid {
+            if !response.IsCanceled {
+                message = "Payment was successful with the circuit \(response.Brand!)"
+                result("OK")
+            }
+            result("Cancelled by the user")
+
+        } else {
+            message = "There were errors during payment process"
+            result(message)
+
+        }
+    }
+
+
+        private func handleRicorrente(_ response: ApiPagamentoRicorrenteResponse, result: @escaping FlutterResult) {
+
+        var message = "Payment was canceled by user"
+        if response.IsSuccess {
             if !response.IsCanceled {
                 message = "Payment was successful with the circuit \(response.Brand!)"
                 result("OK")
