@@ -49,12 +49,50 @@ public class SwiftNexiPaymentPlugin: NSObject, FlutterPlugin {
           case "xPayFrontOfficePaga":
             print(">>entering xPayFrontOfficePaga")
             xPayFrontOfficePaga(call, result: result)
+            
+          case "xPayFrontOfficePagaSalvaCarta":
+            print(">>entering xPayFrontOfficePagaSalvaCarta")
+            xPayFrontOfficePagaSalvaCarta(call, result: result)
 
           default:
               result(FlutterMethodNotImplemented)
           }
   }
 
+    func xPayFrontOfficePagaSalvaCarta(_ call: FlutterMethodCall,  result: @escaping FlutterResult){
+        let rootViewController:UIViewController! = UIApplication.shared.keyWindow?.rootViewController
+        guard let args = call.arguments else {
+            return
+        }
+        if let myArgs = args as? [String: Any],
+            let alias = myArgs["alias"] as? String,
+            let codTrans = myArgs["codTrans"] as? String,
+            let extraKeys = myArgs["extraKeys"] as? [String: Any],
+            let _ = myArgs["currency"] as? String,
+            let amount = myArgs["amount"] as? Int {
+
+
+          let apiFrontOfficeQPRequest = ApiFrontOfficeQPRequest(
+            alias: alias,
+            codTrans: codTrans,
+            currency: CurrencyUtilsQP.EUR,
+            amount: amount)
+            
+            apiFrontOfficeQPRequest.ExtraParameters["tipo_servizio"] = extraKeys["tipo_servizio"] as? String;
+            apiFrontOfficeQPRequest.ExtraParameters["tipo_richiesta"] = extraKeys["tipo_richiesta"] as? String;
+            apiFrontOfficeQPRequest.ExtraParameters["num_contratto"] = extraKeys["num_contratto"] as? String;
+            apiFrontOfficeQPRequest.ExtraParameters["gruppo"] = extraKeys["gruppo"] as? String;
+
+            xPay?._FrontOffice.paga(apiFrontOfficeQPRequest, navigation: true, parentController: rootViewController, completionHandler: { response in
+                self.handleFrontOffice(response, result: result)
+            })
+
+        } else {
+            result(FlutterError(code: "-1", message: "iOS could not extract " +
+                "flutter arguments in method: (initXPay)", details: nil))
+        }
+    }
+    
     func xPayFrontOfficePaga(_ call: FlutterMethodCall,  result: @escaping FlutterResult){
         let rootViewController:UIViewController! = UIApplication.shared.keyWindow?.rootViewController
         guard let args = call.arguments else {
