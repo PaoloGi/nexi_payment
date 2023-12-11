@@ -17,8 +17,8 @@ class NexiPayment {
 
   NexiPayment({
     required this.secretKey,
-    this.environment = "",
-    this.domain = EnvironmentUtils.TEST,
+    this.environment = EnvironmentUtils.TEST,
+    this.domain = "",
   });
 
   ///Initialize XPay object with the activity
