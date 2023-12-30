@@ -1,4 +1,7 @@
 class EnvironmentUtils {
-  static const String PROD = "PROD";
-  static const String TEST = "TEST";
+
+  const EnvironmentUtils._();
+
+  static const String prod = 'PROD';
+  static const String test = 'TEST';
 }

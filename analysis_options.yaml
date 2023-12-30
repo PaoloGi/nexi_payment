@@ -1,0 +1,13 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    todo: warning
+    missing_return: error
+    dead_code: error
+  exclude:
+    - "lib/generated_plugin_registrant.dart"
+
+linter:
+  rules:
+    - prefer_single_quotes
