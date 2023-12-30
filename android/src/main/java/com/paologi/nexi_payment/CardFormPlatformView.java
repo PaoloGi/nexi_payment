@@ -72,17 +72,22 @@ public class CardFormPlatformView implements PlatformView, MethodChannel.MethodC
                     call.argument("amount") != null ? ((Integer)call.argument("amount")) : 0 ,
                     CurrencyUtils.EUR,
                     call.argument("codTrans").toString(),
-                    EnvironmentUtils.Environment.TEST,
+                    call.argument("environment") == "TEST" ? EnvironmentUtils.Environment.TEST : EnvironmentUtils.Environment.PROD,
 
                     new ApiResponseCallback<ApiCreaNonceResponse>() {
                         @Override
                         public void onSuccess(ApiCreaNonceResponse apiCreaNonceResponse) {
-                            result.success(true);
+                            if (apiCreaNonceResponse.isSuccess()) {
+                                result.success(response.getNonce());
+                            } else {
+                                result.success(apiCreaNonceResponse.getError());
+                            }
 //                            mNoncePresenter.onSuccessCreateNonce(apiCreaNonceResponse.getNonce());
                         }
 
                         @Override
                         public void onError(ApiErrorResponse apiErrorResponse) {
+                            result.success(apiErrorResponse.getError());
 //                            mNoncePresenter.onErrorCreateNonce(apiErrorResponse.getError().getMessage());
                         }
                     });
