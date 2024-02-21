@@ -33,10 +33,10 @@ class NexiPayment {
   Future<String> xPayFrontOfficePaga(
       String alias, String codTrans, String currency, int amount) async {
     await _initXPay(secretKey, environment, domain);
-    ApiFrontOfficeQPRequest request =
+    var request =
         ApiFrontOfficeQPRequest(alias, codTrans, currency, amount);
     var res =
-        await _channel.invokeMethod("xPayFrontOfficePaga", request.toMap());
+        await _channel.invokeMethod('xPayFrontOfficePaga', request.toMap());
     return res;
   }
 }
