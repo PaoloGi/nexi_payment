@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:nexi_payment/nexi_payment.dart';
 import 'package:nexi_payment/models/currency_utils_qp.dart';
 import 'package:nexi_payment/models/environment_utils.dart';
-import 'package:nexi_payment_example/second_page.dart';
+import 'package:nexi_payment/nexi_payment.dart';
+
+import './second_page.dart';
 
 void main() {
   runApp(MyApp());
