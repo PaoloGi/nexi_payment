@@ -1,7 +1,6 @@
 package com.paologi.nexi_payment;
 
 import android.app.Activity;
-import android.content.Context;
 
 import androidx.annotation.NonNull;
 
@@ -11,13 +10,10 @@ import io.flutter.Log;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
-import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
-import io.flutter.plugin.common.PluginRegistry.Registrar;
-import io.flutter.plugin.platform.PlatformViewRegistry;
 import it.nexi.xpay.CallBacks.FrontOfficeCallbackQP;
 import it.nexi.xpay.Models.WebApi.Errors.ApiErrorResponse;
 import it.nexi.xpay.Models.WebApi.Requests.FrontOffice.ApiFrontOfficeQPRequest;
@@ -36,23 +32,12 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
 
   public NexiPaymentPlugin() {   }
 
-  public NexiPaymentPlugin(Activity activity){
-    this.activity = activity;
-  }
-
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
     Log.i(TAG, ">> onAttachedToEngine: entering");
-    channel = new MethodChannel(flutterPluginBinding.getFlutterEngine().getDartExecutor(), "nexi_payment");
+    channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "nexi_payment");
     channel.setMethodCallHandler(this);
   }
-
-  public static void registerWith(Registrar registrar) {
-    Log.i(TAG, ">> registerWith: entering");
-    final MethodChannel channel = new MethodChannel(registrar.messenger(), "nexi_payment");
-    channel.setMethodCallHandler(new NexiPaymentPlugin(registrar.activity()));
-  }
-
 
   @Override
   public void onMethodCall(@NonNull final MethodCall call, @NonNull final Result result) {
@@ -132,8 +117,6 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
     };
 
     xPay.FrontOffice.paga(apiFrontOfficeQPRequest, true, callback);
-
-
   }
 
 

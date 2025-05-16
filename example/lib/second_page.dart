@@ -4,6 +4,8 @@ import 'package:nexi_payment/models/environment_utils.dart';
 import 'package:nexi_payment/nexi_payment.dart';
 
 class SecondPage extends StatefulWidget {
+  const SecondPage({super.key});
+
   @override
   State<StatefulWidget> createState() => SecondPageState();
 }
@@ -14,7 +16,7 @@ class SecondPageState extends State<SecondPage> {
   @override
   void initState() {
     super.initState();
-    _nexiPayment = new NexiPayment(
+    _nexiPayment = const NexiPayment(
       secretKey: '_your_secret_key',
       environment: EnvironmentUtils.test,
     );
@@ -31,7 +33,7 @@ class SecondPageState extends State<SecondPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               ElevatedButton(
-                child: Text('PAY'),
+                child: const Text('PAY'),
                 onPressed: () => _paga('insert_cod_trans41'),
               ),
             ],
@@ -51,14 +53,14 @@ class SecondPageState extends State<SecondPage> {
       context: context,
       builder: (c2) => AlertDialog(
         title: Container(
-          margin: EdgeInsets.only(bottom: 10),
+          margin: const EdgeInsets.only(bottom: 10),
           child: Stack(
             children: <Widget>[
               Positioned(
                 bottom: -12,
                 left: -15,
                 child: IconButton(
-                    icon: Icon(Icons.arrow_back),
+                    icon: const Icon(Icons.arrow_back),
                     color: Colors.blueAccent,
                     onPressed: () => Navigator.of(context).pop()),
               ),
@@ -66,14 +68,14 @@ class SecondPageState extends State<SecondPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   Container(
-                    margin: EdgeInsets.only(right: 5),
-                    child: Icon(
+                    margin: const EdgeInsets.only(right: 5),
+                    child: const Icon(
                       Icons.euro_symbol,
                       color: Colors.black38,
                       size: 25,
                     ),
                   ),
-                  Text(
+                  const Text(
                     'Response',
                     style: TextStyle(
                         fontSize: 22,
