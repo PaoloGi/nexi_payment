@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:nexi_payment/nexi_payment.dart';
 import 'package:nexi_payment/models/currency_utils_qp.dart';
 import 'package:nexi_payment/models/environment_utils.dart';
+import 'package:nexi_payment/nexi_payment_npg.dart';
 import 'package:nexi_payment_example/second_page.dart';
+
+/// NPG sandbox credentials, passed at run time so they never end up in git:
+/// flutter run --dart-define=NPG_HOSTNAME=... --dart-define=NPG_API_KEY=...
+const String npgHostname = String.fromEnvironment('NPG_HOSTNAME');
+const String npgApiKey = String.fromEnvironment('NPG_API_KEY');
 
 void main() {
   runApp(MyApp());
@@ -36,7 +42,7 @@ class TestPageState extends State<TestPage> {
 
     ///domain is not mandatory and it is set to https://ecommerce.nexi.it automatically if empty
     _nexiPayment = NexiPayment(
-        secretKey: "_your_key",
+        secretKey: "XPAY_TEST_SECRET_KEY",
         environment: EnvironmentUtils.TEST,
         domain: "https://ecommerce.nexi.it");
   }
@@ -54,7 +60,9 @@ class TestPageState extends State<TestPage> {
               children: <Widget>[
             ElevatedButton(
                 child: Text("PAY"),
-                onPressed: () => _paga("pagamento-ios test-domain")),
+                onPressed: () => _paga("pagamento-and test-domain233288")),
+            ElevatedButton(
+                child: Text("PAY WITH NPG (HPP)"), onPressed: _pagaNpg),
             ElevatedButton(
                 child: Text("GO to A SECOND PAGE"),
                 onPressed: () => Navigator.push<Widget>(
@@ -69,8 +77,27 @@ class TestPageState extends State<TestPage> {
 
   void _paga(String codTrans) async {
     var res = await _nexiPayment.xPayFrontOfficePaga(
-        "_your_alias", codTrans, CurrencyUtilsQP.EUR, 2500);
+        "ALIAS_WEB_TEST", codTrans, CurrencyUtilsQP.EUR, 2500);
     openEndPaymentDialog(res);
+  }
+
+  void _pagaNpg() async {
+    if (npgHostname.isEmpty || npgApiKey.isEmpty) {
+      openEndPaymentDialog(
+          "Missing NPG credentials: run with --dart-define=NPG_HOSTNAME=... --dart-define=NPG_API_KEY=...");
+      return;
+    }
+    final npg = NexiNpgPayment(hostname: npgHostname, apiKey: npgApiKey);
+    final result = await npg.payWithHostedPaymentPage(NpgHostedPaymentRequest(
+      orderId: "ex${DateTime.now().millisecondsSinceEpoch}",
+      amount: 100,
+      currency: "EUR",
+      language: "ita",
+      description: "nexi_payment example NPG payment",
+    ));
+    openEndPaymentDialog(result.isSuccess
+        ? "OK"
+        : "${result.status.name}: ${result.errorCode ?? ''} ${result.errorMessage ?? ''} ${result.operationResult ?? ''}");
   }
 
   openEndPaymentDialog(String response) async {
@@ -118,6 +145,7 @@ class TestPageState extends State<TestPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: <Widget>[
               Text(response,
+                  key: const Key('paymentResult'),
                   style: TextStyle(
                       color: response == "OK" ? Colors.green : Colors.red))
             ],
