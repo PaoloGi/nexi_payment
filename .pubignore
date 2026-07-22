@@ -1,0 +1,33 @@
+# IMPORTANT: when a .pubignore exists, pub uses it INSTEAD of the .gitignore
+# in the same directory — the .gitignore rules stop applying to publishing.
+# So every publish-relevant .gitignore rule must be duplicated here; keep the
+# two files in sync when adding ignores.
+
+# --- mirrored from .gitignore ---
+
+.dart_tool/
+.packages
+.idea/
+/build/
+
+# Patrol generates this bundle on every run
+example/integration_test/test_bundle.dart
+example/patrol_test/
+
+# Nexi SDK binaries fetched by ios/scripts/fetch_frameworks.sh at pod install.
+# They are Nexi's, not ours: the podspec/README promise they are NOT
+# redistributed in this package.
+ios/Frameworks/
+
+# Local Nexi test-area credentials (backoffice login included) — never publish
+test/test_area_keys.json
+
+# --- pub-only ignores ---
+
+# IDE project file, not needed by consumers of the package.
+nexi_payment.iml
+
+# Screenshots used only in README.md/GitHub rendering, not part of the
+# published API surface; they needlessly bloat the pub archive.
+android_screen_1.jpg
+android_screen_2.jpg
