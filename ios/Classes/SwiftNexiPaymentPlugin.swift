@@ -4,6 +4,7 @@ import XPaySDK
 
 public class SwiftNexiPaymentPlugin: NSObject, FlutterPlugin {
   private var xPay: XPay?
+  private var paymentInProgress = false
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let channel = FlutterMethodChannel(name: "nexi_payment", binaryMessenger: registrar.messenger())
@@ -59,7 +60,14 @@ public class SwiftNexiPaymentPlugin: NSObject, FlutterPlugin {
       self.xPay = xPay
       result("OK")
     } catch {
-      result(FlutterError(code: "DEVICE_JAILBROKEN", message: error.localizedDescription, details: nil))
+      switch error {
+      case XPayError.JailbrokenDevice:
+        result(FlutterError(code: "DEVICE_JAILBROKEN", message: error.localizedDescription, details: nil))
+      default:
+        // XPay(secretKey:) throws XPayError, whose other cases (OldiOSVersion,
+        // CannotCalculateMac, ...) are not jailbreak-related.
+        result(FlutterError(code: "INIT_FAILED", message: error.localizedDescription, details: nil))
+      }
     }
   }
 
@@ -72,30 +80,41 @@ public class SwiftNexiPaymentPlugin: NSObject, FlutterPlugin {
       result(FlutterError(code: "NO_ACTIVITY", message: "No root view controller available.", details: nil))
       return
     }
+    guard !paymentInProgress else {
+      result(FlutterError(code: "IN_PROGRESS", message: "A payment is already in progress.", details: nil))
+      return
+    }
     guard let myArgs = call.arguments as? [String: Any],
           let alias = myArgs["alias"] as? String,
           let codTrans = myArgs["codTrans"] as? String,
-          let _ = myArgs["currency"] as? String,
+          let currency = myArgs["currency"] as? String,
           let amount = myArgs["amount"] as? Int else {
       result(FlutterError(code: "INVALID_REQUEST", message: "iOS could not extract " +
           "flutter arguments in method: (xPayFrontOfficePaga)", details: nil))
       return
     }
+    guard currency == CurrencyUtilsQP.EUR else {
+      result(FlutterError(code: "INVALID_REQUEST", message: "Unsupported currency: \(currency)", details: nil))
+      return
+    }
 
     let apiFrontOfficeQPRequest = ApiFrontOfficeQPRequest(alias: alias, codTrans: codTrans, currency: CurrencyUtilsQP.EUR, amount: amount)
 
+    paymentInProgress = true
     xPay._FrontOffice.paga(apiFrontOfficeQPRequest, navigation: true, parentController: rootViewController, completionHandler: { response in
       self.handleFrontOffice(response, result: result)
     })
   }
 
   private func handleFrontOffice(_ response: ApiFrontOfficeQPResponse, result: @escaping FlutterResult) {
+    paymentInProgress = false
     if response.IsValid && !response.IsCanceled {
       result("OK")
     } else if response.IsCanceled {
-      result("Cancelled by the user")
+      result("Operation canceled by the user")
     } else {
-      result("There were errors during payment process")
+      let message = response.Error?.Message ?? "Auth Denied"
+      result(FlutterError(code: "AUTH_DENIED", message: message, details: nil))
     }
   }
 }

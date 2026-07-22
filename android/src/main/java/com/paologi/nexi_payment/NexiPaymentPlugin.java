@@ -35,6 +35,7 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
   private MethodChannel npgChannel;
   private NpgMethodCallHandler npgHandler;
   private ActivityPluginBinding activityBinding;
+  private Result pendingResult;
 
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
@@ -89,6 +90,10 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
       result.error("NOT_INITIALIZED", "XPay is not initialized. Call initXPay first.", null);
       return;
     }
+    if (pendingResult != null) {
+      result.error("IN_PROGRESS", "A payment is already in progress.", null);
+      return;
+    }
 
     final ApiFrontOfficeQPRequest apiFrontOfficeQPRequest;
     try {
@@ -98,9 +103,16 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
       return;
     }
 
+    pendingResult = result;
+
     FrontOfficeCallbackQP callback = new FrontOfficeCallbackQP() {
       @Override
       public void onConfirm(ApiFrontOfficeQPResponse apiFrontOfficeQPResponse) {
+        Result result = pendingResult;
+        pendingResult = null;
+        if (result == null) {
+          return;
+        }
         if (apiFrontOfficeQPResponse.isValid()) {
           Log.i(TAG, "QP Payment successful with circuit card: " + apiFrontOfficeQPResponse.getBrand());
           result.success("OK");
@@ -115,11 +127,21 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
 
       @Override
       public void onError(ApiErrorResponse error) {
+        Result result = pendingResult;
+        pendingResult = null;
+        if (result == null) {
+          return;
+        }
         result.error(error.getError().getCode(), error.getError().getMessage(), error.getError().toString());
       }
 
       @Override
       public void onCancel(ApiFrontOfficeQPResponse apiFrontOfficeQPResponse) {
+        Result result = pendingResult;
+        pendingResult = null;
+        if (result == null) {
+          return;
+        }
         result.success("Operation canceled by the user");
       }
     };
@@ -132,18 +154,18 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
     String alias = call.argument("alias");
     String codTrans = call.argument("codTrans");
     String currency = call.argument("currency");
-    if (alias == null || codTrans == null || currency == null) {
-      throw new IllegalArgumentException("alias, codTrans and currency are required");
-    }
     Number amount = call.argument("amount");
-    return new ApiFrontOfficeQPRequest(alias, codTrans, currency,
-            amount != null ? amount.longValue() : 0);
+    if (alias == null || codTrans == null || currency == null || amount == null) {
+      throw new IllegalArgumentException("alias, codTrans, currency and amount are required");
+    }
+    return new ApiFrontOfficeQPRequest(alias, codTrans, currency, amount.longValue());
   }
 
   @Override
   public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
     channel.setMethodCallHandler(null);
     npgChannel.setMethodCallHandler(null);
+    failPendingResults();
   }
 
   @Override
@@ -153,6 +175,8 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
 
   @Override
   public void onDetachedFromActivityForConfigChanges() {
+    // The Activity is about to be recreated for a config change (e.g. rotation): keep any
+    // pending Result alive so the SDK callback can still deliver it once we reattach.
     detachFromActivity();
   }
 
@@ -163,7 +187,9 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
 
   @Override
   public void onDetachedFromActivity() {
+    // Final detach: the Activity is gone for good, so any pending payment can never complete.
     detachFromActivity();
+    failPendingResults();
   }
 
   private void attachToActivity(ActivityPluginBinding binding) {
@@ -179,6 +205,22 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
       activityBinding = null;
     }
     activity = null;
+    // Drop the XPay instance too: it holds a reference to the Activity it was built with, and
+    // Dart re-runs initXPay before every payment, so recreating it on reattach is a no-op cost.
+    xPay = null;
     npgHandler.setActivity(null);
+  }
+
+  /**
+   * Completes any pending classic and NPG Results with an error instead of leaving the Dart
+   * future hanging, and clears the in-progress state so the plugin can be used again.
+   */
+  private void failPendingResults() {
+    if (pendingResult != null) {
+      Result result = pendingResult;
+      pendingResult = null;
+      result.error("ACTIVITY_DESTROYED", "Activity was destroyed while a payment was in progress.", null);
+    }
+    npgHandler.failPendingResult();
   }
 }

@@ -38,6 +38,19 @@ public class NpgMethodCallHandler implements MethodChannel.MethodCallHandler, Pl
     this.activity = activity;
   }
 
+  /**
+   * Completes any pending Result with an error instead of leaving the Dart future hanging, and
+   * clears the in-progress state. Called by the plugin when the Activity or engine is torn down
+   * for good while a payment is in progress.
+   */
+  public void failPendingResult() {
+    Result result = pendingResult;
+    pendingResult = null;
+    if (result != null) {
+      result.error("ACTIVITY_DESTROYED", "Activity was destroyed while a payment was in progress.", null);
+    }
+  }
+
   @Override
   public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
     if (!call.method.equals("npgHostedPaymentPage")) {
@@ -131,8 +144,20 @@ public class NpgMethodCallHandler implements MethodChannel.MethodCallHandler, Pl
     } else {
       Exception exception = (Exception) data.getSerializableExtra("exception");
       map.put("status", "error");
-      map.put("errorCode", exception != null ? exception.getClass().getSimpleName() : "UNKNOWN");
-      map.put("errorMessage", exception != null ? exception.getMessage() : null);
+      if (exception instanceof com.google.gson.JsonSyntaxException) {
+        // NPGSDK 1.1.0 (the latest Nexi ships) declares operations[].additionalData
+        // as a String, but the NPG backend returns an object there, so the SDK
+        // fails to parse the outcome of a payment that may well have been
+        // EXECUTED and CAPTURED (verified against the sandbox on 2026-07-22).
+        map.put("errorCode", "RESULT_PARSING_FAILED");
+        map.put("errorMessage", "The Nexi NPG SDK could not parse the payment outcome; "
+                + "the payment may still have succeeded. Verify the order server-side "
+                + "(orders API or server-to-server notification) before treating it as "
+                + "failed. Original error: " + exception.getMessage());
+      } else {
+        map.put("errorCode", exception != null ? exception.getClass().getSimpleName() : "UNKNOWN");
+        map.put("errorMessage", exception != null ? exception.getMessage() : null);
+      }
       result.success(map);
     }
     return true;

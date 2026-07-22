@@ -66,7 +66,20 @@ class NpgHandler: NSObject {
           },
           controller: rootViewController)
       } catch {
-        finish(FlutterError(code: Self.errorCode(for: error), message: "\(error)", details: nil))
+        if error is DecodingError {
+          // Parity with Android: NPGSDK 1.1.0 models operations[].additionalData
+          // as a String while the NPG backend returns an object, so parsing the
+          // outcome can fail even though the payment was EXECUTED and CAPTURED.
+          finish(FlutterError(
+            code: "RESULT_PARSING_FAILED",
+            message: "The Nexi NPG SDK could not parse the payment outcome; "
+              + "the payment may still have succeeded. Verify the order "
+              + "server-side (orders API or server-to-server notification) "
+              + "before treating it as failed. Original error: \(error)",
+            details: nil))
+        } else {
+          finish(FlutterError(code: Self.errorCode(for: error), message: "\(error)", details: nil))
+        }
       }
     }
   }
