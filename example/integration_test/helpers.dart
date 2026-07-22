@@ -23,12 +23,12 @@ const String classicAlias = 'ALIAS_WEB_00026202';
 
 /// A fresh request; the orderId must be unique per payment attempt.
 NpgHostedPaymentRequest newRequest() => NpgHostedPaymentRequest(
-      orderId: 'it${DateTime.now().millisecondsSinceEpoch}',
-      amount: 100,
-      currency: 'EUR',
-      language: 'ita',
-      description: 'nexi_payment integration test',
-    );
+  orderId: 'it${DateTime.now().millisecondsSinceEpoch}',
+  amount: 100,
+  currency: 'EUR',
+  language: 'ita',
+  description: 'nexi_payment integration test',
+);
 
 /// Minimal app shell for tests that drive the plugin API directly and only
 /// need a running engine with an attached Activity.

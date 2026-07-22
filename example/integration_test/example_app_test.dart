@@ -8,7 +8,7 @@ import 'package:patrol/patrol.dart';
 /// Activity makes patrol wait for a frame that never arrives.
 void main() {
   patrolTest('the example app shows both gateway buttons', ($) async {
-    await $.pumpWidgetAndSettle(MyApp());
+    await $.pumpWidgetAndSettle(const MyApp());
 
     expect($('PAY'), findsOneWidget);
     expect($('PAY WITH NPG (HPP)'), findsOneWidget);
