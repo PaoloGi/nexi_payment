@@ -164,6 +164,10 @@ switch (result.status) {
 > ever regresses. 1.1.0 is the latest SDK Nexi ships; this note goes away when
 > they fix the Android model.
 
+<img src="https://raw.githubusercontent.com/PaoloGi/nexi_payment/master/npg_screen_1.jpg" width="400">
+
+<img src="https://raw.githubusercontent.com/PaoloGi/nexi_payment/master/npg_screen_2.jpg" width="400">
+
 ## Testing
 
 See [TESTING.md](TESTING.md) for the unit tests, the Patrol integration tests

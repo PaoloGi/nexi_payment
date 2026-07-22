@@ -222,7 +222,7 @@ Nexi's test cards (both gateways):
 |---|---|---|---|---|
 | Visa | 4509 0345 4361 5006 | 10/2028 | 298 | success |
 | Mastercard | 5100 9908 1789 6004 | 04/2027 | 301 | success |
-| Visa | 43499 4019999 7007 | 12/2028 | 829 | failure |
+| Visa | 4349 9401 9999 7007 | 12/2028 | 829 | failure |
 
 Run through, on a real device for each platform:
 
