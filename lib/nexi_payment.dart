@@ -21,11 +21,14 @@ class NexiPayment {
   /// [xPayFrontOfficePaga] settles in one of three ways:
   ///  * resolves with `'OK'` when the payment succeeds;
   ///  * resolves with this constant when the user cancels the checkout;
-  ///  * throws a [PlatformException] for anything else, with one of these
-  ///    stable codes: `AUTH_DENIED`, `IN_PROGRESS` (a payment is already in
-  ///    progress), `INVALID_REQUEST`, `NOT_INITIALIZED`, `NO_ACTIVITY`,
-  ///    `DEVICE_ROOTED`, `DEVICE_JAILBROKEN`, `ACTIVITY_DESTROYED` (the host
-  ///    Activity/ViewController was torn down mid-payment), `INIT_FAILED`.
+  ///  * throws a [PlatformException] for anything else, usually with one of
+  ///    these stable codes: `AUTH_DENIED`, `IN_PROGRESS` (a payment is
+  ///    already in progress), `INVALID_REQUEST`, `NOT_INITIALIZED`,
+  ///    `NO_ACTIVITY`, `DEVICE_ROOTED`, `DEVICE_JAILBROKEN`,
+  ///    `ACTIVITY_DESTROYED` (Android only: the host Activity was torn down
+  ///    mid-payment), `INIT_FAILED`. On Android, lower-level SDK failures
+  ///    can additionally surface with the SDK's own error code, so treat
+  ///    this list as the common cases rather than a closed set.
   static const String canceledByUser = 'Operation canceled by the user';
 
   /// Merchant secret key ("chiave per il calcolo mac") from your Nexi terminal.
