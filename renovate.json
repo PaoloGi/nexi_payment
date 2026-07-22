@@ -1,0 +1,21 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "description": "Group all non-major (minor/patch) updates into a single PR per manager to cut down on noise; majors still get their own PR for review.",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "minor and patch updates"
+    },
+    {
+      "description": "The vendored Nexi SDK binaries are not renovatable: android/libs/*.aar are committed .aar files with no package registry backing them, and ios/scripts/fetch_frameworks.sh pins Nexi's XPay/NPGSDK xcframework archive URLs with hardcoded SHA-256 checksums. Both must be bumped by hand when Nexi ships a new SDK version (see README.md / TESTING.md release checklist) rather than by an automated PR.",
+      "matchFileNames": [
+        "android/libs/**",
+        "ios/scripts/fetch_frameworks.sh"
+      ],
+      "enabled": false
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - 'v*'
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Flutter version pinned across every job below: 3.44.7 (bundles Dart 3.12.2),
+# the latest stable release as of 2026-07-22.
+#
+# Why this satisfies both constraints in the repo:
+#   - pubspec.yaml (the plugin itself) floors at Dart >=3.3.0 / Flutter
+#     >=3.16.0.
+#   - example/pubspec.yaml floors at Dart >=3.8.0, a higher requirement
+#     driven by the patrol integration-test tooling, not by the plugin.
+#     build-android and build-ios below build the example app, so the
+#     toolchain they run with must satisfy that higher floor too.
+# 3.44.7 comfortably clears both. It's pinned to an explicit version rather
+# than `channel: stable` so the pipeline is reproducible and doesn't drift
+# silently when a new stable release ships; bump it deliberately (Renovate
+# does not manage this pin).
+env:
+  FLUTTER_VERSION: '3.44.7'
+
+jobs:
+  analyze:
+    name: Analyze & unit test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run unit tests
+        run: flutter test
+
+  build-android:
+    name: Build Android example (debug)
+    needs: analyze
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install example dependencies
+        working-directory: example
+        run: flutter pub get
+
+      - name: Build debug APK
+        working-directory: example
+        run: flutter build apk --debug
+
+  build-ios:
+    name: Build iOS example (debug, unsigned)
+    needs: analyze
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install example dependencies
+        working-directory: example
+        run: flutter pub get
+
+      # `flutter build ios` runs `pod install` under the hood, which invokes
+      # the podspec's prepare_command (ios/scripts/fetch_frameworks.sh). That
+      # script downloads the Nexi XPay/NPG SDK xcframework archives over the
+      # network and verifies them against pinned SHA-256 checksums, so this
+      # step needs outbound network access and takes noticeably longer than a
+      # typical `pod install` — that's expected, not a hang.
+      - name: Build iOS (debug, no codesign)
+        working-directory: example
+        run: flutter build ios --debug --no-codesign
+
+  # Patrol integration tests (example/integration_test/*) drive the real
+  # native XPay/NPG SDKs end-to-end through the Nexi sandbox and need a
+  # booted emulator/simulator or a physical device, plus sandbox credentials
+  # (see TESTING.md). They deliberately do NOT run in this workflow. Left
+  # here as a stub in case a self-hosted runner or device farm ever makes
+  # running them in CI worth the cost.
+  #
+  # patrol-integration:
+  #   name: Patrol integration tests
+  #   needs: analyze
+  #   runs-on: macos-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v7
+  #     - name: Set up Flutter
+  #       uses: subosito/flutter-action@v2
+  #       with:
+  #         flutter-version: ${{ env.FLUTTER_VERSION }}
+  #         channel: stable
+  #         cache: true
+  #     - name: Activate patrol_cli
+  #       run: dart pub global activate patrol_cli
+  #     - name: Boot simulator and run Patrol tests
+  #       working-directory: example
+  #       run: patrol test --target integration_test/npg_gateway_test.dart
