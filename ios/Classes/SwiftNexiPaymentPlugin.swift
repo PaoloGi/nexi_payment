@@ -101,20 +101,36 @@ public class SwiftNexiPaymentPlugin: NSObject, FlutterPlugin {
     let apiFrontOfficeQPRequest = ApiFrontOfficeQPRequest(alias: alias, codTrans: codTrans, currency: CurrencyUtilsQP.EUR, amount: amount)
 
     paymentInProgress = true
+    let finish = singleShot(result)
     xPay._FrontOffice.paga(apiFrontOfficeQPRequest, navigation: true, parentController: rootViewController, completionHandler: { response in
-      self.handleFrontOffice(response, result: result)
+      self.handleFrontOffice(response, finish: finish)
     })
   }
 
-  private func handleFrontOffice(_ response: ApiFrontOfficeQPResponse, result: @escaping FlutterResult) {
-    paymentInProgress = false
+  /// Wraps the Flutter result so that only the first outcome is delivered,
+  /// on the main thread, and the in-progress flag is always released. The
+  /// XPay SDK is expected to call its completion handler once on the main
+  /// thread, but nothing in its API guarantees either.
+  private func singleShot(_ result: @escaping FlutterResult) -> (Any) -> Void {
+    var delivered = false
+    return { value in
+      DispatchQueue.main.async {
+        guard !delivered else { return }
+        delivered = true
+        self.paymentInProgress = false
+        result(value)
+      }
+    }
+  }
+
+  private func handleFrontOffice(_ response: ApiFrontOfficeQPResponse, finish: (Any) -> Void) {
     if response.IsValid && !response.IsCanceled {
-      result("OK")
+      finish("OK")
     } else if response.IsCanceled {
-      result("Operation canceled by the user")
+      finish("Operation canceled by the user")
     } else {
       let message = response.Error?.Message ?? "Auth Denied"
-      result(FlutterError(code: "AUTH_DENIED", message: message, details: nil))
+      finish(FlutterError(code: "AUTH_DENIED", message: message, details: nil))
     }
   }
 }
