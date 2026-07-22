@@ -1,8 +1,11 @@
+# NOTE: because a .pubignore exists, pub ignores this file when publishing and
+# uses .pubignore alone — mirror any publish-relevant rule added here into
+# .pubignore too, or it ships in the package.
 .dart_tool/
 .packages
 .idea/
-# Declared here rather than relying on a machine-local global ignore: pub only
-# reads repo-level ignores, so without this the build cache ships in the package.
+# Declared here rather than relying on a machine-local global ignore, so the
+# build cache stays out of both git and (via the .pubignore mirror) the package.
 /build/
 
 # Patrol generates this bundle on every run
@@ -11,3 +14,6 @@ example/patrol_test/
 
 # Nexi SDK binaries are fetched by ios/scripts/fetch_frameworks.sh at pod install
 ios/Frameworks/
+
+# Local Nexi test-area credentials (backoffice login included) — never commit
+test/test_area_keys.json
