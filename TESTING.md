@@ -18,6 +18,10 @@ a hosted checkout page).
 
 Pure Dart. These mock the method channel, so they verify the arguments the
 plugin sends and how it decodes replies, without touching the native SDKs.
+`analyze` and `flutter test` also run automatically in CI
+(`.github/workflows/ci.yml`) on every push and pull request, alongside debug
+builds of the example app for both platforms; the Patrol and manual layers
+below are not run in CI (see the comments in that file for why).
 
 ```bash
 flutter analyze
@@ -25,9 +29,14 @@ flutter test                 # plugin
 cd example && flutter test   # example app widget test
 ```
 
-Covered: classic `initXPay` + `xPayFrontOfficePaga` argument maps and the `"OK"`
-passthrough, NPG request encoding, NPG success/canceled/error decoding, and
-`PlatformException` → `NpgPaymentResult.error` mapping.
+Covered: classic `initXPay` + `xPayFrontOfficePaga` argument maps (including
+that the removed dead fields — `timeStamp`, `mac`, `clientType`, `extraKeys`
+— never reach the channel) and the `"OK"` passthrough, resolving with
+`NexiPayment.canceledByUser` on cancel, rethrowing a native
+`PlatformException` (e.g. `AUTH_DENIED`) unchanged, NPG request encoding, NPG
+success/canceled/error decoding, `PlatformException` →
+`NpgPaymentResult.error` mapping, and NPG's `MissingPluginException` →
+error-result mapping for platforms that don't implement the plugin.
 
 ---
 
@@ -179,15 +188,23 @@ flutter run --dart-define=NPG_HOSTNAME=stg-ta.nexigroup.com \
 Classic gateway (**PAY**):
 
 - [ ] Completing a payment with a success card shows `OK` in green.
-- [ ] Cancelling shows `Operation canceled by the user`.
-- [ ] Using the failure card surfaces an `AUTH_DENIED` `PlatformException`
-      rather than a success string.
+- [ ] Cancelling shows `Operation canceled by the user`
+      (`NexiPayment.canceledByUser`).
+- [ ] Using the failure card shows an `AUTH_DENIED: ...` dialog — the example
+      app catches the `PlatformException` — instead of a success string or an
+      uncaught exception.
 - [ ] Backgrounding the app mid-payment and returning still resolves.
+- [ ] Starting a second payment while one is already open is refused with
+      `IN_PROGRESS` instead of the two payments interfering with each other.
 
 NPG gateway (**PAY WITH NPG (HPP)**):
 
 - [ ] A success card returns `status: success` with `operationResult`
-      `EXECUTED` or `AUTHORIZED`.
+      `EXECUTED` or `AUTHORIZED`. On **Android** it may instead return
+      `status: error` with `errorCode: RESULT_PARSING_FAILED`, the known
+      NPGSDK 1.1.0 parsing defect (see README) — in that case verify via the
+      orders API that the order is EXECUTED/CAPTURED; the payment itself went
+      through. iOS parses cleanly and returns `EXECUTED`.
 - [ ] Dismissing the checkout resolves instead of hanging.
 - [ ] A wrong-but-well-formed UUID key returns a typed error.
 - [ ] With `notificationUrl` set, your backend receives the server-to-server
@@ -211,3 +228,13 @@ cd example && flutter build apk --debug && flutter build ios --simulator --no-co
 pod lib lint ios/nexi_payment.podspec --allow-warnings
 dart pub publish --dry-run
 ```
+
+`android/consumer-rules.pro` keeps both native SDKs' model classes, so
+consumers don't need any ProGuard/R8 setup of their own for a minified
+release build. The example app's own `release` build type doesn't set
+`minifyEnabled true`, so `flutter build apk --debug` above doesn't exercise
+those rules. If you touch `consumer-rules.pro` or bump either native SDK,
+temporarily set `minifyEnabled true` (and `shrinkResources true`) in
+`example/android/app/build.gradle`, build a release APK, and confirm a
+payment still goes through — Gson-reflected fields silently break at runtime
+rather than at compile time if a keep rule is ever wrong.
