@@ -1,0 +1,28 @@
+# Requires automated publishing to be enabled for this package on pub.dev
+# (Admin → Automated publishing → GitHub Actions).
+#
+# On pub.dev, configure:
+#   Repository:  PaoloGi/nexi_payment
+#   Tag pattern: v{{version}}
+#
+# Publishing is delegated to dart-lang/setup-dart's reusable workflow, which
+# checks out the repo, sets up the Dart SDK and OIDC token, then *also* sets
+# up a Flutter SDK before publishing — needed because nexi_payment declares a
+# `flutter:` section in pubspec.yaml (it's a plugin, not a pure-Dart
+# package), and `dart pub publish` refuses to run without it. It then runs
+# `dart pub publish --dry-run` followed by `dart pub publish -f`,
+# authenticating via OIDC instead of a stored pub.dev credential/token —
+# hence the `id-token: write` permission below.
+name: Publish to pub.dev
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+jobs:
+  publish:
+    name: Publish
+    permissions:
+      id-token: write
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
