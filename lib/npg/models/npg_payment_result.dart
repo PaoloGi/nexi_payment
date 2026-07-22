@@ -1,8 +1,19 @@
 /// Outcome of an NPG payment.
-enum NpgPaymentStatus { success, canceled, error }
+enum NpgPaymentStatus {
+  /// The payment completed successfully (see `operationResult` for detail).
+  success,
+
+  /// The user dismissed the checkout before completing the payment.
+  canceled,
+
+  /// The payment failed or its outcome could not be determined (see
+  /// `errorCode`/`errorMessage`).
+  error,
+}
 
 /// Typed result of an NPG Hosted Payment Page payment.
 class NpgPaymentResult {
+  /// How the payment ended.
   final NpgPaymentStatus status;
 
   /// Identifier of the order the payment belongs to.
@@ -41,9 +52,15 @@ class NpgPaymentResult {
     this.errorMessage,
   });
 
+  /// Creates an error result with an optional [code] and [message].
   const NpgPaymentResult.error({String? code, String? message})
-      : this._(status: NpgPaymentStatus.error, errorCode: code, errorMessage: message);
+      : this._(
+          status: NpgPaymentStatus.error,
+          errorCode: code,
+          errorMessage: message,
+        );
 
+  /// Builds a result from the map returned over the platform channel.
   factory NpgPaymentResult.fromMap(Map<String, dynamic> map) {
     final NpgPaymentStatus status;
     switch (map['status']) {
@@ -69,7 +86,10 @@ class NpgPaymentResult {
     );
   }
 
+  /// Whether [status] is [NpgPaymentStatus.success].
   bool get isSuccess => status == NpgPaymentStatus.success;
+
+  /// Whether [status] is [NpgPaymentStatus.canceled].
   bool get isCanceled => status == NpgPaymentStatus.canceled;
 
   @override
