@@ -6,8 +6,6 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nexi_payment/models/currency_utils_qp.dart';
-import 'package:nexi_payment/models/environment_utils.dart';
 import 'package:nexi_payment/nexi_payment.dart';
 import 'package:patrol/patrol.dart';
 
@@ -22,10 +20,12 @@ void main() {
   patrolTest('the classic checkout opens without crashing', ($) async {
     await $.pumpWidgetAndSettle(const TestHarness());
 
+    // No `domain` override: TEST must resolve to int-ecommerce.nexi.it.
+    // Passing the production URL here used to send the test terminal's
+    // request to production, which rejects it before the card form loads.
     final nexiPayment = NexiPayment(
       secretKey: classicSecretKey,
       environment: EnvironmentUtils.TEST,
-      domain: 'https://ecommerce.nexi.it',
     );
 
     // Deliberately not awaited: the checkout WebView stays open until the
@@ -39,10 +39,12 @@ void main() {
 
     String? outcome;
     Object? failure;
-    unawaited(pending.then(
-      (value) => outcome = value,
-      onError: (Object error) => failure = error,
-    ));
+    unawaited(
+      pending.then(
+        (value) => outcome = value,
+        onError: (Object error) => failure = error,
+      ),
+    );
 
     // Real time, not $.pump: no frames are produced while the checkout
     // Activity is in front. Keep this short — the instrumentation tears the
@@ -55,7 +57,11 @@ void main() {
     // this test fails outright — that is how the androidx.webkit
     // "Unknown feature PAYMENT_REQUEST" regression surfaced.
     expect(failure, isNull, reason: 'the checkout should open, not fail');
-    expect(outcome, isNull, reason: 'the checkout stays open until the user acts');
+    expect(
+      outcome,
+      isNull,
+      reason: 'the checkout stays open until the user acts',
+    );
 
     // Best effort cleanup so the next test starts from a clean screen. This
     // does not resolve `pending`; see the skipped test below.
@@ -70,7 +76,6 @@ void main() {
       final nexiPayment = NexiPayment(
         secretKey: classicSecretKey,
         environment: EnvironmentUtils.TEST,
-        domain: 'https://ecommerce.nexi.it',
       );
 
       final pending = nexiPayment.xPayFrontOfficePaga(
