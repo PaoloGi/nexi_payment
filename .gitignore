@@ -1,12 +1,19 @@
-.dart_tool/package_config.json
-.idea/.gitignore
-.idea/modules.xml
-.idea/nexi_payment.iml
-.idea/vcs.xml
-.idea/codeStyles/Project.xml
-.idea/libraries/Dart_SDK.xml
-.idea/libraries/Flutter_Plugins.xml
-.idea/
-.dart_tool/package_config_subset
-.dart_tool/version
+# NOTE: because a .pubignore exists, pub ignores this file when publishing and
+# uses .pubignore alone — mirror any publish-relevant rule added here into
+# .pubignore too, or it ships in the package.
+.dart_tool/
 .packages
+.idea/
+# Declared here rather than relying on a machine-local global ignore, so the
+# build cache stays out of both git and (via the .pubignore mirror) the package.
+/build/
+
+# Patrol generates this bundle on every run
+example/integration_test/test_bundle.dart
+example/patrol_test/
+
+# Nexi SDK binaries are fetched by ios/scripts/fetch_frameworks.sh at pod install
+ios/Frameworks/
+
+# Local Nexi test-area credentials (backoffice login included) — never commit
+test/test_area_keys.json
