@@ -8,7 +8,7 @@ import 'models/npg_payment_result.dart';
 /// Client for the Nexi NPG gateway (https://developer.nexigroup.com).
 ///
 /// This is independent from the classic XPay gateway exposed by
-/// [NexiPayment]: NPG merchants are identified by a [hostname] and an
+/// `NexiPayment`: NPG merchants are identified by a [hostname] and an
 /// [apiKey] (X-Api-Key) instead of a secret key and an alias.
 ///
 /// Nexi recommends that [hostname] and [apiKey] are retrieved at runtime
@@ -23,15 +23,18 @@ class NexiNpgPayment {
   /// Your NPG X-Api-Key.
   final String apiKey;
 
+  /// Creates an NPG client for the given [hostname] and [apiKey].
   NexiNpgPayment({required this.hostname, required this.apiKey});
 
   /// Opens the NPG Hosted Payment Page in a WebView and completes with the
   /// outcome of the payment.
   ///
-  /// The returned [NpgPaymentResult] always completes: user cancellation is
-  /// reported with [NpgPaymentStatus.canceled] and any failure (invalid
-  /// credentials, network errors, declined payments surfaced as exceptions
-  /// by the native SDK) with [NpgPaymentStatus.error].
+  /// The returned [NpgPaymentResult] always completes, never throws: user
+  /// cancellation is reported with [NpgPaymentStatus.canceled] and any
+  /// failure (invalid credentials, network errors, declined payments
+  /// surfaced as exceptions by the native SDK, or the platform simply not
+  /// implementing this plugin, e.g. on web or desktop) with
+  /// [NpgPaymentStatus.error].
   Future<NpgPaymentResult> payWithHostedPaymentPage(
       NpgHostedPaymentRequest request) async {
     try {
@@ -46,6 +49,11 @@ class NexiNpgPayment {
       return NpgPaymentResult.fromMap(res ?? const <String, dynamic>{});
     } on PlatformException catch (e) {
       return NpgPaymentResult.error(code: e.code, message: e.message);
+    } on MissingPluginException {
+      return const NpgPaymentResult.error(
+        code: 'NOT_IMPLEMENTED',
+        message: 'NPG is not supported on this platform.',
+      );
     }
   }
 }

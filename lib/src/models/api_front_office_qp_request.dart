@@ -6,15 +6,9 @@ class ApiFrontOfficeQPRequest extends ApiFrontOfficeBaseRequest {
   int amount = 0;
 
   ApiFrontOfficeQPRequest(
-      String alias, this.codTrans, this.currency, this.amount)
-      : super(alias);
+      super.alias, this.codTrans, this.currency, this.amount);
 
-  ApiFrontOfficeQPRequest.map(obj) : super.map(obj) {
-    codTrans = obj["codTrans"];
-    currency = obj["currency"];
-    amount = obj["amount"];
-  }
-
+  @override
   Map<String, dynamic> toMap() {
     var map = super.toMap();
     map["codTrans"] = codTrans;

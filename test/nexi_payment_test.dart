@@ -1,8 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexi_payment/nexi_payment.dart';
-import 'package:nexi_payment/models/currency_utils_qp.dart';
-import 'package:nexi_payment/models/environment_utils.dart';
 import 'package:nexi_payment/nexi_payment_npg.dart';
 
 void main() {
@@ -51,6 +49,55 @@ void main() {
       expect(args['codTrans'], 'codTrans1');
       expect(args['currency'], 'EUR');
       expect(args['amount'], 2500);
+
+      // The channel arguments must not carry fields that neither native
+      // implementation reads (and that `mac` misleadingly suggested were
+      // computed client-side).
+      expect(args.containsKey('timeStamp'), isFalse);
+      expect(args.containsKey('mac'), isFalse);
+      expect(args.containsKey('clientType'), isFalse);
+      expect(args.containsKey('extraKeys'), isFalse);
+      expect(args.keys,
+          containsAll(<String>['alias', 'codTrans', 'currency', 'amount']));
+    });
+
+    test(
+        'xPayFrontOfficePaga resolves with NexiPayment.canceledByUser when the user cancels',
+        () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        log.add(call);
+        if (call.method == 'initXPay') return 'OK';
+        return NexiPayment.canceledByUser;
+      });
+
+      final nexiPayment = NexiPayment(secretKey: 'secret');
+
+      final res = await nexiPayment.xPayFrontOfficePaga(
+          'ALIAS', 'codTrans1', CurrencyUtilsQP.EUR, 2500);
+
+      expect(res, NexiPayment.canceledByUser);
+      expect(res, 'Operation canceled by the user');
+    });
+
+    test(
+        'xPayFrontOfficePaga rethrows a PlatformException raised by the native side',
+        () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        log.add(call);
+        if (call.method == 'initXPay') return 'OK';
+        throw PlatformException(code: 'AUTH_DENIED', message: 'denied');
+      });
+
+      final nexiPayment = NexiPayment(secretKey: 'secret');
+
+      expect(
+        () => nexiPayment.xPayFrontOfficePaga(
+            'ALIAS', 'codTrans1', CurrencyUtilsQP.EUR, 2500),
+        throwsA(isA<PlatformException>()
+            .having((e) => e.code, 'code', 'AUTH_DENIED')),
+      );
     });
   });
 
@@ -159,6 +206,60 @@ void main() {
       expect(result.status, NpgPaymentStatus.error);
       expect(result.errorCode, 'IN_PROGRESS');
       expect(result.errorMessage, 'busy');
+    });
+
+    test('a null channel reply (res ?? const {}) decodes to an error result',
+        () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async => null);
+
+      final result = await client().payWithHostedPaymentPage(request());
+
+      expect(result.status, NpgPaymentStatus.error);
+      expect(result.isSuccess, isFalse);
+    });
+
+    test(
+        'maps a MissingPluginException (e.g. web/desktop) to an error result instead of throwing',
+        () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        throw MissingPluginException('No implementation found');
+      });
+
+      final result = await client().payWithHostedPaymentPage(request());
+
+      expect(result.status, NpgPaymentStatus.error);
+      expect(result.isSuccess, isFalse);
+      expect(result.errorMessage, 'NPG is not supported on this platform.');
+    });
+  });
+
+  group('NpgPaymentResult.fromMap', () {
+    test('an empty map decodes to an error status', () {
+      final result = NpgPaymentResult.fromMap(const <String, dynamic>{});
+
+      expect(result.status, NpgPaymentStatus.error);
+      expect(result.isSuccess, isFalse);
+      expect(result.isCanceled, isFalse);
+      expect(result.orderId, isNull);
+      expect(result.errorCode, isNull);
+      expect(result.errorMessage, isNull);
+    });
+
+    test('null-ish/unrecognized status values decode to an error status', () {
+      final result = NpgPaymentResult.fromMap(<String, dynamic>{
+        'status': null,
+        'orderId': null,
+      });
+
+      expect(result.status, NpgPaymentStatus.error);
+
+      final unknownStatus = NpgPaymentResult.fromMap(<String, dynamic>{
+        'status': 'something-unexpected',
+      });
+
+      expect(unknownStatus.status, NpgPaymentStatus.error);
     });
   });
 }

@@ -25,6 +25,10 @@ class NpgHostedPaymentRequest {
   /// Optional free-form field stored with the order.
   final String? customField;
 
+  /// Creates a hosted-payment-page request for [orderId] and [amount].
+  ///
+  /// [currency] defaults to `EUR` and [language] to `ita`; the remaining
+  /// fields are optional.
   const NpgHostedPaymentRequest({
     required this.orderId,
     required this.amount,
@@ -36,6 +40,7 @@ class NpgHostedPaymentRequest {
     this.customField,
   });
 
+  /// Serializes this request to the map sent over the platform channel.
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'orderId': orderId,

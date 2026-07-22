@@ -1,20 +1,55 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:nexi_payment/models/environment_utils.dart';
-import 'models/api_front_office_qp_request.dart';
+import 'src/models/api_front_office_qp_request.dart';
 
+export 'models/environment_utils.dart';
+export 'models/currency_utils_qp.dart';
+
+/// Entry point for the classic Nexi XPay gateway (WebView checkout).
+///
+/// Construct an instance with your merchant [secretKey] and [environment],
+/// then call [xPayFrontOfficePaga] to run a payment. For the newer Nexi NPG
+/// Hosted Payment Page gateway, use `NexiNpgPayment` from
+/// `package:nexi_payment/nexi_payment_npg.dart` instead.
 class NexiPayment {
-  static const MethodChannel _channel = const MethodChannel('nexi_payment');
+  static const MethodChannel _channel = MethodChannel('nexi_payment');
 
-  ///secretKey from backend
-  String secretKey;
+  /// The exact string [xPayFrontOfficePaga] resolves with when the user
+  /// cancels the classic XPay checkout.
+  ///
+  /// [xPayFrontOfficePaga] settles in one of three ways:
+  ///  * resolves with `'OK'` when the payment succeeds;
+  ///  * resolves with this constant when the user cancels the checkout;
+  ///  * throws a [PlatformException] for anything else, with one of these
+  ///    stable codes: `AUTH_DENIED`, `IN_PROGRESS` (a payment is already in
+  ///    progress), `INVALID_REQUEST`, `NOT_INITIALIZED`, `NO_ACTIVITY`,
+  ///    `DEVICE_ROOTED`, `DEVICE_JAILBROKEN`, `ACTIVITY_DESTROYED` (the host
+  ///    Activity/ViewController was torn down mid-payment), `INIT_FAILED`.
+  static const String canceledByUser = 'Operation canceled by the user';
 
-  ///environment type could be: TEST, PROD. Default -> TEST
-  String environment;
+  /// Merchant secret key ("chiave per il calcolo mac") from your Nexi terminal.
+  final String secretKey;
 
-  ///If you like to change the domain of all the HTTP request you must set the domain here (for example: https://newdomain.com)
-  String domain;
+  /// Target environment: [EnvironmentUtils.TEST] or [EnvironmentUtils.PROD].
+  /// Defaults to [EnvironmentUtils.TEST].
+  final String environment;
 
+  /// Optional host override for all HTTP requests (e.g. `https://newdomain.com`).
+  ///
+  /// Leave it empty in almost every case: the SDK derives the host from
+  /// [environment] (TEST -> `https://int-ecommerce.nexi.it`, PROD ->
+  /// `https://ecommerce.nexi.it`). A non-empty [domain] **overrides** that
+  /// mapping — so setting the production URL together with
+  /// [EnvironmentUtils.TEST] sends the test terminal's requests to
+  /// production, which Nexi rejects with a generic error page in the
+  /// checkout.
+  final String domain;
+
+  /// Creates a classic XPay client for the given merchant [secretKey].
+  ///
+  /// [environment] defaults to [EnvironmentUtils.TEST]; leave [domain] empty
+  /// unless you need to override the host derived from [environment].
   NexiPayment({
     required this.secretKey,
     this.environment = EnvironmentUtils.TEST,
