@@ -5,8 +5,11 @@ description: Demonstrates how to use the nexi_payment plugin.
 # pub.dev using `pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
+# The example app requires a newer SDK than the plugin itself (">=3.3.0")
+# because of the patrol integration tests; the plugin's own constraint is
+# unaffected.
 environment:
-  sdk: ">=2.12.0 <3.0.0"
+  sdk: ">=3.8.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -27,6 +30,19 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
+  patrol: ^4.6.0
+  flutter_lints: ^4.0.0
+
+patrol:
+  app_name: nexi_payment_example
+  # patrol defaults to "patrol_test"; keep the standard Flutter layout instead.
+  test_directory: integration_test
+  android:
+    package_name: com.paologi.nexi_payment_example
+  ios:
+    bundle_id: com.paologi.nexiPaymentExample
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

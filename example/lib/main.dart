@@ -1,29 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:nexi_payment/models/currency_utils_qp.dart';
-import 'package:nexi_payment/models/environment_utils.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:nexi_payment/nexi_payment.dart';
+import 'package:nexi_payment/nexi_payment_npg.dart';
+import 'package:nexi_payment_example/payment_result_dialog.dart';
+import 'package:nexi_payment_example/second_page.dart';
 
-import './second_page.dart';
+/// NPG sandbox credentials, passed at run time so they never end up in git:
+/// flutter run --dart-define=NPG_HOSTNAME=... --dart-define=NPG_API_KEY=...
+const String npgHostname = String.fromEnvironment('NPG_HOSTNAME');
+const String npgApiKey = String.fromEnvironment('NPG_API_KEY');
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
-  _MyAppState createState() => _MyAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: TestPage(),
-    );
+    return const MaterialApp(home: TestPage());
   }
 }
 
 class TestPage extends StatefulWidget {
+  const TestPage({super.key});
+
   @override
   State<StatefulWidget> createState() => TestPageState();
 }
@@ -35,96 +42,132 @@ class TestPageState extends State<TestPage> {
   void initState() {
     super.initState();
 
-    ///domain is not mandatory and it is set to https://ecommerce.nexi.it automatically if empty
+    // Leave `domain` unset: the environment picks the right host
+    // (TEST -> int-ecommerce.nexi.it, PROD -> ecommerce.nexi.it). Setting a
+    // domain overrides the environment's host, so passing the production URL
+    // here with environment TEST sends test-terminal requests to production,
+    // which Nexi rejects with a generic error page.
     _nexiPayment = NexiPayment(
-        secretKey: "_your_key",
-        environment: EnvironmentUtils.TEST,
-        domain: "https://ecommerce.nexi.it");
+      secretKey: "XPAY_TEST_SECRET_KEY",
+      environment: EnvironmentUtils.TEST,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Plugin example app'),
-      ),
-      body: Center(
-          child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+      appBar: AppBar(title: const Text('Plugin example app')),
+      // SafeArea + a scroll view keep the buttons reachable and prevent a
+      // RenderFlex overflow on short screens (small phones, split-screen),
+      // while Center keeps them centered when there is room to spare.
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-            ElevatedButton(
-                child: Text("PAY"),
-                onPressed: () => _paga("pagamento-ios test-domain")),
-            ElevatedButton(
-                child: Text("GO to A SECOND PAGE"),
-                onPressed: () => Navigator.push<Widget>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SecondPage(),
-                      ),
-                    )),
-          ])),
+                ElevatedButton(
+                  // codTrans must be unique per attempt: Nexi rejects a
+                  // reused one with a generic "operation failed" page.
+                  onPressed: () =>
+                      _paga("and${DateTime.now().millisecondsSinceEpoch}"),
+                  child: const Text("PAY"),
+                ),
+                ElevatedButton(
+                  onPressed: _pagaNpg,
+                  child: const Text("PAY WITH NPG (HPP)"),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.push<Widget>(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SecondPage()),
+                  ),
+                  child: const Text("GO to A SECOND PAGE"),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   void _paga(String codTrans) async {
-    var res = await _nexiPayment.xPayFrontOfficePaga(
-        "_your_alias", codTrans, CurrencyUtilsQP.EUR, 2500);
-    openEndPaymentDialog(res);
+    try {
+      var res = await _nexiPayment.xPayFrontOfficePaga(
+        "ALIAS_WEB_TEST",
+        codTrans,
+        CurrencyUtilsQP.EUR,
+        2500,
+      );
+      if (!mounted) return;
+      if (res == NexiPayment.canceledByUser) {
+        showPaymentResultDialog(
+          context,
+          PaymentResultKind.canceled,
+          detail: 'You canceled the checkout.',
+        );
+      } else {
+        showPaymentResultDialog(
+          context,
+          PaymentResultKind.success,
+          detail: 'Order $codTrans was authorized.',
+        );
+      }
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      showPaymentResultDialog(
+        context,
+        PaymentResultKind.error,
+        detail: '${e.code}${e.message == null ? '' : ' — ${e.message}'}',
+      );
+    }
   }
 
-  openEndPaymentDialog(String response) async {
-    await showDialog(
-      barrierDismissible: false,
-      context: context,
-      builder: (BuildContext c2) {
-        return AlertDialog(
-          title: Container(
-              margin: EdgeInsets.only(bottom: 10),
-              child: Stack(
-                children: <Widget>[
-                  Positioned(
-                    bottom: -12,
-                    left: -15,
-                    child: IconButton(
-                        icon: Icon(Icons.arrow_back),
-                        color: Colors.blueAccent,
-                        onPressed: () => Navigator.of(context).pop()),
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      Container(
-                        margin: EdgeInsets.only(right: 5),
-                        child: Icon(
-                          Icons.euro_symbol,
-                          color: Colors.black38,
-                          size: 25,
-                        ),
-                      ),
-                      Text(
-                        "Response",
-                        style: TextStyle(
-                            fontSize: 22,
-                            color: Colors.black38,
-                            fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  )
-                ],
-              )),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              Text(response,
-                  style: TextStyle(
-                      color: response == "OK" ? Colors.green : Colors.red))
-            ],
-          ),
-        );
-      },
+  void _pagaNpg() async {
+    if (npgHostname.isEmpty || npgApiKey.isEmpty) {
+      showPaymentResultDialog(
+        context,
+        PaymentResultKind.error,
+        detail:
+            'Missing NPG credentials: run with '
+            '--dart-define=NPG_HOSTNAME=... --dart-define=NPG_API_KEY=...',
+      );
+      return;
+    }
+    final orderId = "ex${DateTime.now().millisecondsSinceEpoch}";
+    final npg = NexiNpgPayment(hostname: npgHostname, apiKey: npgApiKey);
+    final result = await npg.payWithHostedPaymentPage(
+      NpgHostedPaymentRequest(
+        orderId: orderId,
+        amount: 100,
+        currency: "EUR",
+        language: "ita",
+        description: "nexi_payment example NPG payment",
+      ),
     );
+    if (!mounted) return;
+    switch (result.status) {
+      case NpgPaymentStatus.success:
+        showPaymentResultDialog(
+          context,
+          PaymentResultKind.success,
+          detail: 'Order $orderId — ${result.operationResult ?? 'EXECUTED'}',
+        );
+      case NpgPaymentStatus.canceled:
+        showPaymentResultDialog(
+          context,
+          PaymentResultKind.canceled,
+          detail: 'You canceled the checkout.',
+        );
+      case NpgPaymentStatus.error:
+        showPaymentResultDialog(
+          context,
+          PaymentResultKind.error,
+          detail:
+              '${result.errorCode ?? 'error'}${result.errorMessage == null ? '' : ' — ${result.errorMessage}'}',
+        );
+    }
   }
 }

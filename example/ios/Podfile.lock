@@ -1,29 +1,42 @@
 PODS:
+  - CocoaAsyncSocket (7.6.5)
   - Flutter (1.0.0)
-  - nexi_payment (1.0.0):
+  - integration_test (0.0.1):
     - Flutter
-    - Nexi_XPay
-  - Nexi_XPay (1.2.9)
+  - nexi_payment (2.0.0):
+    - Flutter
+  - patrol (0.0.1):
+    - CocoaAsyncSocket (~> 7.6)
+    - Flutter
+    - FlutterMacOS
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
+  - integration_test (from `.symlinks/plugins/integration_test/ios`)
   - nexi_payment (from `.symlinks/plugins/nexi_payment/ios`)
+  - patrol (from `.symlinks/plugins/patrol/darwin`)
 
 SPEC REPOS:
   trunk:
-    - Nexi_XPay
+    - CocoaAsyncSocket
 
 EXTERNAL SOURCES:
   Flutter:
     :path: Flutter
+  integration_test:
+    :path: ".symlinks/plugins/integration_test/ios"
   nexi_payment:
     :path: ".symlinks/plugins/nexi_payment/ios"
+  patrol:
+    :path: ".symlinks/plugins/patrol/darwin"
 
 SPEC CHECKSUMS:
-  Flutter: 434fef37c0980e73bb6479ef766c45957d4b510c
-  nexi_payment: 16aa9f86a00369c8b41704f15cf0d0e3ba5998be
-  Nexi_XPay: 174d542282d512c7417ef54bf11d187cbe7ec153
+  CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  nexi_payment: f050b18b857c34d781fc8d98306dbb14475f7745
+  patrol: 09773d9cd563ec54230813755b3231b2e8252aac
 
-PODFILE CHECKSUM: aafe91acc616949ddb318b77800a7f51bffa2a4c
+PODFILE CHECKSUM: f997d0ea62994fbd2405e7a979dc050d0a746dd6
 
-COCOAPODS: 1.10.0
+COCOAPODS: 1.16.2
