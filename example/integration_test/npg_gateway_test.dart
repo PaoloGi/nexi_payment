@@ -63,15 +63,23 @@ void main() {
       await $.pump(const Duration(seconds: 8));
       await $.native.pressBack();
 
-      // The regression this guards: before 2.0.0 the equivalent classic flow
-      // could leave the future hanging forever instead of reporting an outcome.
+      // The regression this guards: dismissing the checkout used to leave the
+      // future pending forever — on iOS it also left the plugin refusing every
+      // later payment with IN_PROGRESS for the life of the app.
       final result = await pending.timeout(const Duration(seconds: 30));
 
+      // Both platforms now report a dismissed checkout the same way: Android
+      // gets RESULT_CANCELED with no data, and iOS reports a checkout that
+      // disappeared without the SDK saying anything.
+      expect(result.status, NpgPaymentStatus.canceled);
       expect(result.isSuccess, isFalse);
-      expect(
-        result.status,
-        anyOf(NpgPaymentStatus.canceled, NpgPaymentStatus.error),
-      );
+
+      // ...and the plugin must be usable again, not stuck in progress.
+      final afterwards = await npg
+          .payWithHostedPaymentPage(newRequest())
+          .timeout(const Duration(seconds: 30));
+      expect(afterwards.errorCode, isNot('IN_PROGRESS'));
+      await $.native.pressBack();
     },
   );
 
