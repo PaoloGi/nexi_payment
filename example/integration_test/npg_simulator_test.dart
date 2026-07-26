@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:nexi_payment/nexi_payment_npg.dart';
@@ -71,4 +72,27 @@ void main() {
     expect(result.status, NpgPaymentStatus.error);
     expect(result.errorCode, 'INVALID_CREDENTIALS');
   });
+
+  // Last on purpose: it leaves a checkout on screen, because a payment only
+  // completes once its checkout is gone and this test is about what happens
+  // while one is still open. Patrol covers the same guard on Android; this is
+  // the only automated cover for it on iOS.
+  testWidgets('a second payment is refused while one is in progress',
+      (tester) async {
+    await tester.pumpWidget(const MyApp());
+    await tester.pumpAndSettle();
+
+    final npg = NexiNpgPayment(
+      hostname: npgSandboxHostname,
+      apiKey: npgSandboxApiKey,
+    );
+
+    unawaited(npg.payWithHostedPaymentPage(newRequest()));
+    await Future<void>.delayed(const Duration(seconds: 10));
+
+    final second = await npg.payWithHostedPaymentPage(newRequest());
+
+    expect(second.status, NpgPaymentStatus.error);
+    expect(second.errorCode, 'IN_PROGRESS');
+  }, timeout: const Timeout(Duration(minutes: 2)));
 }

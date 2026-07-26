@@ -74,12 +74,14 @@ void main() {
       expect(result.status, NpgPaymentStatus.canceled);
       expect(result.isSuccess, isFalse);
 
-      // ...and the plugin must be usable again, not stuck in progress.
-      final afterwards = await npg
-          .payWithHostedPaymentPage(newRequest())
-          .timeout(const Duration(seconds: 30));
-      expect(afterwards.errorCode, isNot('IN_PROGRESS'));
+      // ...and the plugin must be usable again, not stuck in progress. This
+      // one is dismissed the same way: a payment only completes once its
+      // checkout is gone, so it cannot be awaited before pressing back.
+      final afterwards = npg.payWithHostedPaymentPage(newRequest());
+      await $.pump(const Duration(seconds: 8));
       await $.native.pressBack();
+      final second = await afterwards.timeout(const Duration(seconds: 30));
+      expect(second.errorCode, isNot('IN_PROGRESS'));
     },
   );
 
