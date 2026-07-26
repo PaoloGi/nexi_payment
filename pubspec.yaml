@@ -1,6 +1,6 @@
 name: nexi_payment
 description: "Flutter plugin for Nexi payments: XPay WebView checkout and the Nexi NPG Hosted Payment Page, on Android and iOS."
-version: 2.0.0
+version: 2.1.0
 homepage: https://github.com/PaoloGi/nexi_payment
 repository: https://github.com/PaoloGi/nexi_payment
 issue_tracker: https://github.com/PaoloGi/nexi_payment/issues

@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'nexi_payment'
-  s.version          = '2.0.0'
+  s.version          = '2.1.0'
   s.summary          = 'Flutter plugin for Nexi payments (XPay and NPG gateways).'
   s.description      = <<-DESC
 Flutter plugin for Nexi payments: classic XPay WebView payments and the
