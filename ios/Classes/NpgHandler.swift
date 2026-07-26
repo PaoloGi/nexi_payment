@@ -55,11 +55,12 @@ class NpgHandler: NSObject {
     inProgress = true
     let finish = self.singleShot(result)
     Task { @MainActor in
+      self.reportCheckoutDismissal(from: rootViewController, finish: finish)
       do {
         try await client.CreateOrderHPPWebView(
           param: request,
           cbResultOk: { operation in
-            finish(Self.successMap(operation))
+            finish(Self.completedMap(operation))
           },
           cbResultCancel: { _ in
             finish(["status": "canceled"])
@@ -84,6 +85,50 @@ class NpgHandler: NSObject {
     }
   }
 
+  /// How long to wait, after the checkout disappears, for a result the SDK
+  /// may still be about to deliver. Comfortably longer than the gap between
+  /// the SDK dismissing its page and invoking its callback.
+  private static let dismissalGrace: TimeInterval = 2.5
+
+  /// Reports a cancellation when the checkout goes away without the SDK
+  /// saying anything.
+  ///
+  /// The SDK presents its checkout modally and only calls back when the page
+  /// itself reaches an outcome. Two ordinary user behaviours produce no
+  /// callback at all: dragging the sheet down to dismiss it, and the page
+  /// dead-ending (an expired session shows an error with no way out but to
+  /// dismiss). Without this, the Dart future would never complete and
+  /// `inProgress` would refuse every later payment for the life of the app.
+  ///
+  /// A real outcome always wins: [singleShot] delivers only once, and the
+  /// grace period below leaves room for a result that is already on its way.
+  private func reportCheckoutDismissal(
+    from presenter: UIViewController,
+    finish: @escaping (Any) -> Void
+  ) {
+    var checkoutDidAppear = false
+    Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+      guard let self = self, self.inProgress else {
+        timer.invalidate()
+        return
+      }
+      if presenter.presentedViewController != nil {
+        checkoutDidAppear = true
+        return
+      }
+      guard checkoutDidAppear else {
+        return
+      }
+      timer.invalidate()
+      DispatchQueue.main.asyncAfter(deadline: .now() + Self.dismissalGrace) {
+        guard self.inProgress else {
+          return
+        }
+        finish(["status": "canceled"])
+      }
+    }
+  }
+
   /// Wraps the Flutter result so that only the first outcome is delivered,
   /// on the main thread, and the in-progress flag is always released.
   private func singleShot(_ result: @escaping FlutterResult) -> (Any) -> Void {
@@ -98,10 +143,17 @@ class NpgHandler: NSObject {
     }
   }
 
+  /// The payload for a payment the SDK carried to completion.
+  ///
+  /// `status: "success"` means the SDK finished and returned an operation —
+  /// NOT that the payment was taken: the SDK calls this same callback for a
+  /// declined card or a failed 3DS. Dart decides the real outcome from
+  /// `operationResult`; do not treat this status as the verdict.
+  ///
   /// Absent fields are omitted rather than sent as nil: a Swift dictionary
   /// holding Optional.none does not bridge cleanly through the platform
   /// channel, and the Dart side reads missing keys as null anyway.
-  private static func successMap(_ operation: NPGSDK.Operation) -> [String: Any] {
+  private static func completedMap(_ operation: NPGSDK.Operation) -> [String: Any] {
     var map: [String: Any] = ["status": "success"]
     func put(_ key: String, _ value: String?) {
       if let value = value {
