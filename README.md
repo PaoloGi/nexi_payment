@@ -150,19 +150,47 @@ switch (result.status) {
 > identify your merchant and should be retrieved at runtime from your backend,
 > not hardcoded in the app.
 
-> **Known limitation (NPG SDK 1.1.0, Android).** The Android NPGSDK models
-> `operations[].additionalData` as a string, but the NPG backend returns an
-> object there — so after a completed card payment the Android SDK can fail to
-> parse the outcome **even though the payment was executed and captured**
-> (verified against the sandbox: the orders API reported `EXECUTED`/`CAPTURED`
-> while the Android SDK threw a parsing exception; the same sandbox payment
-> parses cleanly on iOS and returns `EXECUTED`). The plugin surfaces this case
-> as `NpgPaymentStatus.error` with `errorCode: RESULT_PARSING_FAILED`. Treat
-> that code as "outcome unknown", not as a decline: verify the order
-> server-side (orders API by `orderId`, or your `notificationUrl`) before
-> failing the purchase. iOS carries the same defensive guard in case its SDK
-> ever regresses. 1.1.0 is the latest SDK Nexi ships; this note goes away when
-> they fix the Android model.
+`NpgPaymentStatus.success` means the payment went through — the plugin reports
+it only for a final `AUTHORIZED` or `EXECUTED` operation. That is a stricter
+rule than the native SDKs apply: they call their "completed" callback for a
+payment that merely *finished*, so a declined card or a failed 3DS would
+otherwise look like a success. Those arrive as `NpgPaymentStatus.error` with
+the NPG operation result as `errorCode` (`THREEDS_FAILED`, `DECLINED`,
+`DENIED_BY_RISK`, …), and `operationResult` always carries the raw value.
+
+### The SDK's parsing defect, and how the plugin works around it
+
+NPGSDK 1.1.0 (the latest Nexi ships) models `operations[].additionalData` as a
+string, but the NPG backend returns an object there — so after a completed card
+payment the Android SDK can fail to parse the outcome **even though the payment
+was executed and captured**. Left alone, a successful payment looks like a
+failure.
+
+The plugin handles this for you: when the SDK cannot parse the outcome, it reads
+the order back from the NPG orders API (the same `hostname` and `apiKey` it used
+to create it) and reports the real result. A payment that went through comes
+back as `NpgPaymentStatus.success` with its true `operationResult`.
+
+Recovery never invents a success — it only reports one for a final `AUTHORIZED`
+or `EXECUTED` operation. A genuine decline comes back as an error carrying the
+NPG operation result (e.g. `DECLINED`), and anything else — a non-final state,
+or an orders API that is unreachable or unhappy — leaves the original
+`errorCode: RESULT_PARSING_FAILED` untouched, which still means "outcome
+unknown, verify server-side", never "declined":
+
+```dart
+if (result.errorCode == NpgPaymentResult.resultParsingFailedCode) {
+  // The payment may well have succeeded — confirm the order server-side
+  // (your notificationUrl, or the orders API) before failing the purchase.
+}
+```
+
+Turn the whole thing off with `NexiNpgPayment(..., recoverOutcomeOnParsingFailure: false)`
+if your app must not call the NPG API directly — for instance because your
+backend already reconciles every order.
+
+iOS parses the same payment cleanly, so this only bites on Android today; the
+guard is wired on both platforms in case Nexi's iOS SDK ever regresses.
 
 <img src="https://raw.githubusercontent.com/PaoloGi/nexi_payment/master/npg_screen_1.jpg" width="400">
 
