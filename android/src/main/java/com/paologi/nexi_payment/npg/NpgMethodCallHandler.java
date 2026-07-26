@@ -130,6 +130,9 @@ public class NpgMethodCallHandler implements MethodChannel.MethodCallHandler, Pl
 
     if (resultCode == Activity.RESULT_OK) {
       Operation operation = (Operation) data.getSerializableExtra("response");
+      // RESULT_OK means the SDK finished and returned an operation, NOT that the payment was
+      // taken: the SDK reports a declined card or a failed 3DS the same way. Dart decides the
+      // real outcome from operationResult, so do not treat this status as the verdict.
       map.put("status", "success");
       if (operation != null) {
         map.put("orderId", operation.getOrderId());
