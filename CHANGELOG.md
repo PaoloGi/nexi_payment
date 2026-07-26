@@ -1,3 +1,62 @@
+## 2.1.0
+
+* **FIX (important): a failed NPG payment is no longer reported as a success.**
+  Both native SDKs invoke their "completed" callback for a payment that merely
+  *finished* — including one that was declined or failed 3DS — and the plugin
+  took that at face value, so failing 3DS came back as
+  `NpgPaymentStatus.success` with `THREEDS_FAILED` sitting in
+  `operationResult`. The outcome is now decided by `operationResult` whenever
+  NPG reports one: only a final `AUTHORIZED`/`EXECUTED` is a success, and
+  anything else (`DECLINED`, `DENIED_BY_RISK`, `THREEDS_FAILED`, `FAILED`,
+  `CANCELED`, `VOIDED`, `REFUNDED`, and non-final states such as `PENDING` or
+  `THREEDS_VALIDATED`) is an error carrying that value as `errorCode`.
+  Found on a real device against the sandbox; it affects 2.0.0.
+  * Behaviour change if you worked around this by checking `operationResult`
+    yourself after a `success`: those payments now arrive as errors, which is
+    what they always were. A result with no `operationResult` at all is
+    unchanged — there is nothing to contradict the platform with.
+* NPG: a payment whose outcome the native SDK cannot parse is no longer
+  reported as a failure. The plugin now reads the order back from the NPG
+  orders API (`GET /api/phoenix-0.0/psp/api/v1/orders/{orderId}`, with the
+  `hostname` and `apiKey` it already uses) and reports the real outcome, so a
+  payment that went through comes back as `NpgPaymentStatus.success` with its
+  true `operationResult`. This works around the NPGSDK 1.1.0 defect that made
+  every successful Android card payment surface as `RESULT_PARSING_FAILED`.
+  * Recovery is conservative: only a final `AUTHORIZED`/`EXECUTED` operation is
+    reported as a success; final negative outcomes become an error carrying the
+    NPG operation result (e.g. `DECLINED`); a non-final state, or an orders API
+    that is unreachable, unauthorized or unparseable, leaves the original
+    `RESULT_PARSING_FAILED` result untouched. It never turns a known outcome
+    into a worse one, and never throws.
+  * Opt out with `NexiNpgPayment(..., recoverOutcomeOnParsingFailure: false)`.
+  * `NexiNpgPayment` accepts an optional `httpGet` to route that call through
+    your own HTTP stack (proxy, pinning, logging); it defaults to the exported
+    `npgDefaultHttpGet`, a plain `dart:io` GET that you can wrap instead of
+    reimplementing, so the package stays dependency-free.
+  * The operation is picked by `operationTime` rather than by the order the
+    API happens to list operations in, so a retried payment always resolves to
+    its latest attempt.
+* NPG: added `NpgPaymentResult.resultParsingFailedCode` so the "outcome
+  unknown" code no longer has to be hardcoded by callers.
+* NPG: added `NpgPaymentResult.fromOperation`, which maps one `operations[]`
+  entry of the NPG orders API to a result using the same success rule as the
+  rest of the plugin. The recovery above is built on it, and it is public so
+  you can reuse it when you query the orders API yourself; it returns null
+  when the operation's outcome is not final.
+* NPG: a `hostname` that is not a bare host (one carrying a scheme or a path,
+  or an empty one) is now rejected identically on both platforms, offline and
+  before any native call, with `errorCode: 'INVALID_CREDENTIALS'` and a message
+  naming the host you should have used. Previously only Android rejected it —
+  its SDK validates the host when the client is built, while the iOS SDK
+  accepts it and fails later on the network with `NPG_ERROR`, which contradicted
+  the documented "fails fast before any network call" behaviour.
+* NPG (iOS): dismissing the checkout by swiping the sheet down — or closing a
+  page with no way forward, such as an expired session — now completes the
+  payment with `NpgPaymentStatus.canceled` instead of leaving the future
+  pending forever and refusing every later payment with `IN_PROGRESS`. A real
+  outcome still wins: cancellation is reported only when the SDK stays silent
+  after the checkout is gone.
+
 ## 2.0.0
 
 * NEW: NPG gateway support (developer.nexigroup.com) — `NexiNpgPayment.payWithHostedPaymentPage`

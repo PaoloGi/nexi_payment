@@ -28,7 +28,7 @@ app if you happen to have both.
 
 ```yaml
 dependencies:
-  nexi_payment: ^2.0.0
+  nexi_payment: ^2.1.0
 ```
 
 ### Android
@@ -211,6 +211,14 @@ Treat that notification as the source of truth. The in-app result tells you what
 the user saw; it does not survive the user killing the app right after paying.
 Mark orders paid from the notification, and use the in-app result only to drive
 the UI.
+
+That advice stands even though the plugin already protects you from the known
+NPGSDK 1.1.0 parsing defect: when the native SDK cannot read the outcome of a
+payment, the plugin fetches the order from the NPG orders API and reports the
+real result instead of a bogus failure (see the README). If even that lookup
+cannot settle it, you get `errorCode: NpgPaymentResult.resultParsingFailedCode`,
+which means "outcome unknown" — resolve it from your backend, never by
+assuming a decline.
 
 ---
 
