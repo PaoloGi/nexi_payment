@@ -12,6 +12,12 @@ a hosted checkout page).
 | Patrol integration tests | native SDK round-trip, error mapping, no hung futures | yes | sandbox only |
 | Manual checklist | real card payment, rooted/jailbroken devices | yes | yes |
 
+> Driving a full NPG payment by hand — every outcome and every way a user can
+> leave the checkout — is written up step by step in `docs/DEVICE_TESTING.md`,
+> with the exact commands, coordinates and workarounds for our own test phone
+> and the iOS simulator. That runbook is kept local (it is neither committed
+> nor published) because it is specific to our devices.
+
 ---
 
 ## 1. Unit tests
@@ -91,10 +97,10 @@ patrol test --dart-define=NPG_HOSTNAME=your-host.nexigroup.com \
   rule that is easy to get wrong.
 - **Non-UUID API key is rejected.** Same path; the SDK requires the key to be a
   UUID. Also offline.
-- **The Hosted Payment Page opens and always completes.** Starts a real payment
-  against the sandbox, dismisses the checkout natively, and asserts a result
-  comes back within 30s. This guards the bug class fixed in 2.0.0, where the
-  future could never complete.
+- **The Hosted Payment Page opens, and a dismissed checkout reports
+  `canceled`.** Starts a real payment against the sandbox, dismisses the
+  checkout natively, asserts the result is `canceled` within 30s, then starts
+  another payment to prove the plugin is not left stuck in progress.
 - **A second concurrent payment is refused** with `IN_PROGRESS`, covering the
   re-entrancy guard in the native handlers.
 
@@ -141,10 +147,15 @@ So, for a test that opens a checkout:
 
 ### Deliberately not asserted
 
-The dismissal tests assert only that a result arrives and is *not* success.
-Whether the SDK reports a dismissed checkout as `canceled` or as an `error`
-is the SDK's choice and differs between the two gateways; pinning it would
-make the suite brittle without testing anything we control.
+The **classic** dismissal test asserts only that a result arrives and is *not*
+success: what XPaySDK reports for a dismissed checkout is its own choice, and
+pinning it would make the suite brittle without testing anything we control.
+
+NPG is different — there the plugin decides, so its dismissal test pins the
+outcome to `canceled` on both platforms and then starts another payment to
+prove the plugin is not stuck. That combination is the regression guard for the
+2.1.0 iOS fix, where dismissing the sheet left the future pending forever and
+every later payment refused with `IN_PROGRESS`.
 
 ---
 
@@ -200,12 +211,22 @@ Classic gateway (**PAY**):
 NPG gateway (**PAY WITH NPG (HPP)**):
 
 - [ ] A success card returns `status: success` with `operationResult`
-      `EXECUTED` or `AUTHORIZED`. On **Android** it may instead return
-      `status: error` with `errorCode: RESULT_PARSING_FAILED`, the known
-      NPGSDK 1.1.0 parsing defect (see README) — in that case verify via the
-      orders API that the order is EXECUTED/CAPTURED; the payment itself went
-      through. iOS parses cleanly and returns `EXECUTED`.
-- [ ] Dismissing the checkout resolves instead of hanging.
+      `EXECUTED` or `AUTHORIZED` — on **both** platforms. On Android the SDK
+      itself still fails to parse the outcome (the NPGSDK 1.1.0 defect, see
+      README); the plugin recovers it from the orders API, so the *user-visible*
+      result must be a success. Getting `errorCode: RESULT_PARSING_FAILED`
+      here means recovery did not run or could not reach the API: check the
+      device network, then verify via the orders API that the order really is
+      EXECUTED/CAPTURED.
+- [ ] With `recoverOutcomeOnParsingFailure: false`, the same Android payment
+      goes back to reporting `RESULT_PARSING_FAILED` — the opt-out works.
+- [ ] A payment that finishes without succeeding — the failure card, or
+      pressing "AUTENTICAZIONE FALLITA" on the 3DS page — returns
+      `status: error` with the NPG outcome as `errorCode` (`DECLINED`,
+      `THREEDS_FAILED`, …), never `status: success`.
+- [ ] Dismissing the checkout resolves instead of hanging. On iOS also try
+      swiping the sheet down: `canceled` arrives within a few seconds, and a
+      new payment can be started right after.
 - [ ] A wrong-but-well-formed UUID key returns a typed error.
 - [ ] With `notificationUrl` set, your backend receives the server-to-server
       notification.

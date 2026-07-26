@@ -22,10 +22,15 @@ ios/Frameworks/
 # Local Nexi test-area credentials (backoffice login included) — never publish
 test/test_area_keys.json
 
+# Internal testing notes, kept out of git and out of the package alike (without
+# this a local publish would ship them even though a CI publish could not).
+/docs/
+
 # --- pub-only ignores ---
 
 # IDE project file, not needed by consumers of the package.
 nexi_payment.iml
+
 
 # Screenshots used only in README.md/GitHub rendering, not part of the
 # published API surface; they needlessly bloat the pub archive.

@@ -153,7 +153,7 @@ class TestPageState extends State<TestPage> {
         showPaymentResultDialog(
           context,
           PaymentResultKind.success,
-          detail: 'Order $orderId — ${result.operationResult ?? 'EXECUTED'}',
+          detail: 'Order $orderId — ${result.operationResult ?? 'paid'}',
         );
       case NpgPaymentStatus.canceled:
         showPaymentResultDialog(
