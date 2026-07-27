@@ -29,9 +29,10 @@ class NexiNpgPayment {
   /// Whether to read the order back from the NPG orders API when the native
   /// SDK cannot parse the outcome of a payment. Defaults to true.
   ///
-  /// NPGSDK 1.1.0 models `operations[].additionalData` as a string while the
-  /// backend returns an object, so on Android the SDK fails to parse the
-  /// outcome of a payment that actually went through. With this enabled the
+  /// NPGSDK 1.1.0 declares `operations[].additionalData` as
+  /// `Map<String, String>` while the backend nests an object inside it
+  /// (`originalTraceId`), so on Android the SDK can fail to parse the outcome
+  /// of a payment that actually went through. With this enabled the
   /// plugin fetches the order (same [hostname] and [apiKey] it already uses
   /// to create it) and reports the real outcome, instead of surfacing
   /// [NpgPaymentResult.resultParsingFailedCode].

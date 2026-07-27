@@ -149,9 +149,11 @@ public class NpgMethodCallHandler implements MethodChannel.MethodCallHandler, Pl
       map.put("status", "error");
       if (exception instanceof com.google.gson.JsonSyntaxException) {
         // NPGSDK 1.1.0 (the latest Nexi ships) declares operations[].additionalData
-        // as a String, but the NPG backend returns an object there, so the SDK
-        // fails to parse the outcome of a payment that may well have been
-        // EXECUTED and CAPTURED (verified against the sandbox on 2026-07-22).
+        // as Map<String, String>, but the NPG backend nests an object inside it
+        // (originalTraceId), which that value type cannot hold. Gson then fails
+        // ("Expected a string but was BEGIN_OBJECT", reported against the
+        // containing map) for a payment that may well have been EXECUTED and
+        // CAPTURED — verified against the sandbox on 2026-07-22.
         map.put("errorCode", "RESULT_PARSING_FAILED");
         map.put("errorMessage", "The Nexi NPG SDK could not parse the payment outcome; "
                 + "the payment may still have succeeded. Verify the order server-side "

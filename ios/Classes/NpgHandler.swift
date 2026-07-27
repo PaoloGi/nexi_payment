@@ -68,8 +68,9 @@ class NpgHandler: NSObject {
           controller: rootViewController)
       } catch {
         if error is DecodingError {
-          // Parity with Android: NPGSDK 1.1.0 models operations[].additionalData
-          // as a String while the NPG backend returns an object, so parsing the
+          // Parity with Android, where NPGSDK 1.1.0 declares
+          // operations[].additionalData as Map<String, String> while the NPG
+          // backend nests an object in it (originalTraceId), so parsing the
           // outcome can fail even though the payment was EXECUTED and CAPTURED.
           finish(FlutterError(
             code: "RESULT_PARSING_FAILED",

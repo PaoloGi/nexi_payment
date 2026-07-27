@@ -160,8 +160,9 @@ the NPG operation result as `errorCode` (`THREEDS_FAILED`, `DECLINED`,
 
 ### The SDK's parsing defect, and how the plugin works around it
 
-NPGSDK 1.1.0 (the latest Nexi ships) models `operations[].additionalData` as a
-string, but the NPG backend returns an object there — so after a completed card
+NPGSDK 1.1.0 (the latest Nexi ships) declares `operations[].additionalData` as
+`Map<String, String>`, but the NPG backend nests an object inside it —
+`originalTraceId` — which that type cannot hold. So after a completed card
 payment the Android SDK can fail to parse the outcome **even though the payment
 was executed and captured**. Left alone, a successful payment looks like a
 failure.

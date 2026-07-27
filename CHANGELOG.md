@@ -114,8 +114,9 @@
   so it never throws even where the plugin isn't implemented (e.g.
   web/desktop); it returns an error-status `NpgPaymentResult` instead.
 * NPG: a completed payment whose outcome the Android NPGSDK 1.1.0 cannot parse
-  (the SDK models `operations[].additionalData` as a string, the backend
-  returns an object) is now reported with the stable `errorCode`
+  (the SDK declares `operations[].additionalData` as `Map<String, String>`,
+  and the backend nests an object inside it) is now reported with the stable
+  `errorCode`
   `RESULT_PARSING_FAILED` and an explicit "verify the order server-side"
   message, instead of a raw `JsonSyntaxException` class name. Found by
   completing a real sandbox HPP payment on-device: the order was EXECUTED and

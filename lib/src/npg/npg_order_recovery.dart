@@ -4,9 +4,10 @@ import 'npg_orders_api.dart';
 /// Establishes the real outcome of an order from the NPG orders API when the
 /// native SDK could not.
 ///
-/// This exists because NPGSDK 1.1.0 models `operations[].additionalData` as a
-/// string while the backend returns an object: the SDK then fails to parse the
-/// outcome of a payment that actually went through. The orders API returns the
+/// This exists because NPGSDK 1.1.0 declares `operations[].additionalData` as
+/// `Map<String, String>` while the backend nests an object inside it
+/// (`originalTraceId`): the SDK then fails to parse the outcome of a payment
+/// that actually went through. The orders API returns the
 /// same operation, and reading it here avoids reporting a successful payment
 /// as a failure.
 ///

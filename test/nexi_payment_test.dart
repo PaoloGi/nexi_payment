@@ -417,9 +417,9 @@ void main() {
     const channel = MethodChannel('nexi_payment_npg');
 
     /// The orders API payload of a real sandbox payment, trimmed but
-    /// faithful — including the object-valued `additionalData` that the
-    /// native SDK models as a string, which is the whole reason recovery
-    /// exists.
+    /// faithful — including the `additionalData` map whose nested
+    /// `originalTraceId` object the native SDK's `Map<String, String>` cannot
+    /// hold, which is the whole reason recovery exists.
     String orderPayload({
       String operationResult = 'EXECUTED',
       String operationType = 'AUTHORIZATION',
