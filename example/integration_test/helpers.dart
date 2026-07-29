@@ -18,8 +18,24 @@ const String npgSandboxApiKey = String.fromEnvironment(
 );
 
 /// Classic XPay test terminal, the same one the example app uses.
-const String classicSecretKey = 'XPAY_TEST_SECRET_KEY';
-const String classicAlias = 'ALIAS_WEB_TEST';
+/// Classic XPay test terminal, passed at run time so no real terminal's
+/// credentials are ever committed or published:
+///
+/// ```bash
+/// patrol test --dart-define=XPAY_ALIAS=... --dart-define=XPAY_SECRET_KEY=...
+/// ```
+///
+/// The `secretKey` is your terminal's MAC signing key. Treat it like a
+/// password even for a test terminal, and never hardcode a production one —
+/// anyone who unpacks the app can read it out of the binary.
+const String classicSecretKey = String.fromEnvironment(
+  'XPAY_SECRET_KEY',
+  defaultValue: '_your_secret_key_',
+);
+const String classicAlias = String.fromEnvironment(
+  'XPAY_ALIAS',
+  defaultValue: '_your_alias_',
+);
 
 /// A fresh request; the orderId must be unique per payment attempt.
 NpgHostedPaymentRequest newRequest() => NpgHostedPaymentRequest(
