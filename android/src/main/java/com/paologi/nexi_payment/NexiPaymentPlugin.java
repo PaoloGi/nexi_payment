@@ -1,8 +1,13 @@
 package com.paologi.nexi_payment;
 
 import android.app.Activity;
+import android.app.Application;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.io.UnsupportedEncodingException;
 
@@ -36,6 +41,24 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
   private NpgMethodCallHandler npgHandler;
   private ActivityPluginBinding activityBinding;
   private Result pendingResult;
+
+  /** The exact string Dart resolves with when the user leaves the checkout. */
+  private static final String CANCELED_BY_USER = "Operation canceled by the user";
+
+  /** Package of the SDK's checkout screens; everything under it is part of one payment. */
+  private static final String CHECKOUT_PACKAGE = "it.nexi.xpay.webviews.";
+
+  /**
+   * How long to wait, after the last checkout screen goes away, for a result the SDK may
+   * still be about to deliver. Comfortably longer than the gap between it closing its
+   * WebView and invoking FrontOfficeCallbackQP.
+   */
+  private static final long DISMISSAL_GRACE_MS = 2000;
+
+  private final Handler mainHandler = new Handler(Looper.getMainLooper());
+  private Application application;
+  private Application.ActivityLifecycleCallbacks checkoutWatcher;
+  private int liveCheckoutScreens;
 
   @Override
   public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
@@ -142,7 +165,7 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
         if (result == null) {
           return;
         }
-        result.success("Operation canceled by the user");
+        result.success(CANCELED_BY_USER);
       }
     };
 
@@ -197,6 +220,91 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
     activity = binding.getActivity();
     npgHandler.setActivity(activity);
     binding.addActivityResultListener(npgHandler);
+    watchCheckoutScreens(activity.getApplication());
+  }
+
+  /**
+   * Completes a classic payment whose checkout was dismissed without the SDK saying anything.
+   *
+   * <p>XPaySDK's BaseWebViewActivity.onBackPressed only calls WebView.goBack() or
+   * Activity.onBackPressed(): pressing the system back button therefore finishes the checkout
+   * without ever invoking FrontOfficeCallbackQP, leaving the Dart future pending forever and
+   * refusing every later payment with IN_PROGRESS. Cancelling through the payment page's own
+   * link is unaffected — the SDK sees its urlBack navigation and calls onCancel.
+   *
+   * <p>A real outcome always wins: every callback clears pendingResult before delivering, and
+   * the grace period below leaves room for one that is already on its way.
+   */
+  private void watchCheckoutScreens(Application application) {
+    if (checkoutWatcher != null) {
+      return;
+    }
+    this.application = application;
+    liveCheckoutScreens = 0;
+    checkoutWatcher = new Application.ActivityLifecycleCallbacks() {
+      @Override
+      public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle savedInstanceState) {
+        if (isCheckoutScreen(activity)) {
+          liveCheckoutScreens++;
+        }
+      }
+
+      @Override
+      public void onActivityDestroyed(@NonNull Activity activity) {
+        if (!isCheckoutScreen(activity)) {
+          return;
+        }
+        liveCheckoutScreens = Math.max(0, liveCheckoutScreens - 1);
+        if (liveCheckoutScreens > 0 || pendingResult == null) {
+          return;
+        }
+        // The checkout is gone with nothing reported. Give the SDK a moment: on a normal
+        // payment it delivers just after closing, and the 3DS step briefly leaves no screen
+        // alive while it hands over.
+        //
+        // The payment this dismissal belongs to is captured, not looked up again later: if
+        // the SDK reports it during the grace period and the app immediately starts another
+        // payment, the pending result is then a different one, which this must not touch.
+        final Result dismissed = pendingResult;
+        mainHandler.postDelayed(() -> {
+          if (liveCheckoutScreens > 0 || pendingResult != dismissed) {
+            return;
+          }
+          pendingResult = null;
+          Log.i(TAG, "Checkout dismissed without an SDK callback; reporting cancellation");
+          dismissed.success(CANCELED_BY_USER);
+        }, DISMISSAL_GRACE_MS);
+      }
+
+      @Override
+      public void onActivityStarted(@NonNull Activity activity) {}
+
+      @Override
+      public void onActivityResumed(@NonNull Activity activity) {}
+
+      @Override
+      public void onActivityPaused(@NonNull Activity activity) {}
+
+      @Override
+      public void onActivityStopped(@NonNull Activity activity) {}
+
+      @Override
+      public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle outState) {}
+    };
+    application.registerActivityLifecycleCallbacks(checkoutWatcher);
+  }
+
+  private static boolean isCheckoutScreen(Activity activity) {
+    return activity.getClass().getName().startsWith(CHECKOUT_PACKAGE);
+  }
+
+  private void stopWatchingCheckoutScreens() {
+    if (application != null && checkoutWatcher != null) {
+      application.unregisterActivityLifecycleCallbacks(checkoutWatcher);
+    }
+    application = null;
+    checkoutWatcher = null;
+    liveCheckoutScreens = 0;
   }
 
   private void detachFromActivity() {
@@ -204,6 +312,7 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
       activityBinding.removeActivityResultListener(npgHandler);
       activityBinding = null;
     }
+    stopWatchingCheckoutScreens();
     activity = null;
     // Drop the XPay instance too: it holds a reference to the Activity it was built with, and
     // Dart re-runs initXPay before every payment, so recreating it on reattach is a no-op cost.
