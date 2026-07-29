@@ -68,8 +68,13 @@ void main() {
     await $.native.pressBack();
   });
 
+  // The regression this guards: XPaySDK's BaseWebViewActivity.onBackPressed
+  // only calls WebView.goBack() or Activity.onBackPressed(), so it never
+  // invokes FrontOfficeCallbackQP. Until the plugin started watching the
+  // checkout's lifecycle, dismissing it this way left the Dart future pending
+  // forever and refused every later payment with IN_PROGRESS.
   patrolTest(
-    'dismissing the classic checkout with the back button reports an outcome',
+    'dismissing the classic checkout with the back button reports a cancel',
     ($) async {
       await $.pumpWidgetAndSettle(const TestHarness());
 
@@ -87,21 +92,27 @@ void main() {
       await Future<void>.delayed(const Duration(seconds: 15));
       await $.native.pressBack();
 
-      String outcome;
-      try {
-        outcome = await pending.timeout(const Duration(seconds: 30));
-      } on Object catch (e) {
-        outcome = '$e';
-      }
+      // Same outcome the payment page's own cancel link produces.
+      expect(
+        await pending.timeout(const Duration(seconds: 30)),
+        NexiPayment.canceledByUser,
+      );
 
-      expect(outcome, isNotEmpty);
+      // ...and the plugin must be usable again, not stuck in progress. This
+      // one is dismissed the same way: a payment only completes once its
+      // checkout is gone, so it cannot be awaited before pressing back.
+      final afterwards = nexiPayment.xPayFrontOfficePaga(
+        classicAlias,
+        'it${DateTime.now().millisecondsSinceEpoch}',
+        CurrencyUtilsQP.EUR,
+        2500,
+      );
+      await Future<void>.delayed(const Duration(seconds: 15));
+      await $.native.pressBack();
+      expect(
+        await afterwards.timeout(const Duration(seconds: 30)),
+        NexiPayment.canceledByUser,
+      );
     },
-    // KNOWN LIMITATION, not a flake. BaseWebViewActivity.onBackPressed in
-    // XPaySDK only calls WebView.goBack() or Activity.onBackPressed(): it
-    // never invokes the FrontOfficeCallbackQP, so finishing the checkout with
-    // the system back button leaves the Dart future pending forever.
-    // Cancelling through the payment page's own cancel link works, because
-    // the SDK detects its urlBack navigation. See TESTING.md.
-    skip: true,
   );
 }
