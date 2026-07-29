@@ -103,6 +103,124 @@ void main() {
     });
   });
 
+  group('NexiPayment recurring payments (issue #2)', () {
+    const channel = MethodChannel('nexi_payment');
+    final log = <MethodCall>[];
+
+    setUp(() => log.clear());
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    void stub(Object? Function(MethodCall call) reply) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        log.add(call);
+        return call.method == 'initXPay' ? 'OK' : reply(call);
+      });
+    }
+
+    test('extra parameters reach the checkout so a card can be stored',
+        () async {
+      stub((_) => 'OK');
+
+      await NexiPayment(secretKey: 'secret').xPayFrontOfficePaga(
+        'ALIAS',
+        'codTrans1',
+        CurrencyUtilsQP.EUR,
+        2500,
+        extraParameters: const {
+          'num_contratto': 'customer-42-card-1',
+          'tipo_servizio': 'paga_multi',
+        },
+      );
+
+      final args = Map<String, dynamic>.from(log[1].arguments as Map);
+      final extra = Map<String, dynamic>.from(args['extraParameters'] as Map);
+      expect(extra['num_contratto'], 'customer-42-card-1');
+      expect(extra['tipo_servizio'], 'paga_multi');
+    });
+
+    test('a payment without extras sends exactly what it always did', () async {
+      stub((_) => 'OK');
+
+      await NexiPayment(secretKey: 'secret')
+          .xPayFrontOfficePaga('ALIAS', 'codTrans1', CurrencyUtilsQP.EUR, 2500);
+
+      final args = Map<String, dynamic>.from(log[1].arguments as Map);
+      expect(args.containsKey('extraParameters'), isFalse);
+    });
+
+    test('a recurring charge forwards the contract and decodes the result',
+        () async {
+      stub((_) => <String, dynamic>{
+            'isSuccess': true,
+            'authCode': 'GANFYX',
+            'operationId': 'op-1',
+            'brand': 'VISA',
+            'date': '2026-07-29',
+            'time': '11:04:00',
+          });
+
+      final result = await NexiPayment(secretKey: 'secret')
+          .xPayRecurringPayment(
+        alias: 'ALIAS',
+        contractId: 'customer-42-card-1',
+        codTrans: 'codTrans2',
+        amount: 2500,
+      );
+
+      expect(log[1].method, 'xPayRecurringPayment');
+      final args = Map<String, dynamic>.from(log[1].arguments as Map);
+      expect(args['contractId'], 'customer-42-card-1');
+      expect(args['codTrans'], 'codTrans2');
+      expect(args['amount'], 2500);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.authCode, 'GANFYX');
+      expect(result.brand, 'VISA');
+      expect(result.errorCode, isNull);
+    });
+
+    test('a refused recurring charge is a result, not an exception', () async {
+      stub((_) => <String, dynamic>{
+            'isSuccess': false,
+            'errorCode': '109',
+            'errorMessage': 'Carta non abilitata',
+          });
+
+      final result = await NexiPayment(secretKey: 'secret')
+          .xPayRecurringPayment(
+        alias: 'ALIAS',
+        contractId: 'gone',
+        codTrans: 'codTrans3',
+        amount: 2500,
+      );
+
+      expect(result.isSuccess, isFalse);
+      expect(result.errorCode, '109');
+      expect(result.errorMessage, 'Carta non abilitata');
+      expect(result.authCode, isNull);
+    });
+
+    test('a configuration failure still throws', () async {
+      stub((_) => throw PlatformException(
+          code: 'NOT_INITIALIZED', message: 'call initXPay first'));
+
+      expect(
+        () => NexiPayment(secretKey: 'secret').xPayRecurringPayment(
+          alias: 'ALIAS',
+          contractId: 'c',
+          codTrans: 'codTrans4',
+          amount: 2500,
+        ),
+        throwsA(isA<PlatformException>()
+            .having((e) => e.code, 'code', 'NOT_INITIALIZED')),
+      );
+    });
+  });
+
   group('NexiNpgPayment (NPG Hosted Payment Page)', () {
     const channel = MethodChannel('nexi_payment_npg');
 

@@ -10,6 +10,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.io.UnsupportedEncodingException;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.flutter.Log;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -22,8 +24,12 @@ import io.flutter.plugin.common.MethodChannel.Result;
 
 import com.paologi.nexi_payment.npg.NpgMethodCallHandler;
 
+import it.nexi.xpay.CallBacks.ApiResponseCallback;
 import it.nexi.xpay.CallBacks.FrontOfficeCallbackQP;
 import it.nexi.xpay.Models.WebApi.Errors.ApiErrorResponse;
+import it.nexi.xpay.Models.WebApi.Requests.Ricorrenze.ApiPagamentoRicorrenteRequest;
+import it.nexi.xpay.Models.WebApi.Responses.Ricorrenze.ApiPagamentoRicorrenteResponse;
+import it.nexi.xpay.Utils.CurrencyUtils;
 import it.nexi.xpay.Models.WebApi.Requests.FrontOffice.ApiFrontOfficeQPRequest;
 import it.nexi.xpay.Models.WebApi.Responses.FrontOffice.ApiFrontOfficeQPResponse;
 import it.nexi.xpay.Utils.EnvironmentUtils;
@@ -77,6 +83,9 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
         break;
       case "xPayFrontOfficePaga":
         payWebView(call, result);
+        break;
+      case "xPayRecurringPayment":
+        payRecurring(call, result);
         break;
       default:
         result.notImplemented();
@@ -181,7 +190,71 @@ public class NexiPaymentPlugin implements FlutterPlugin, MethodCallHandler, Acti
     if (alias == null || codTrans == null || currency == null || amount == null) {
       throw new IllegalArgumentException("alias, codTrans, currency and amount are required");
     }
-    return new ApiFrontOfficeQPRequest(alias, codTrans, currency, amount.longValue());
+    ApiFrontOfficeQPRequest request =
+            new ApiFrontOfficeQPRequest(alias, codTrans, currency, amount.longValue());
+    // Extra parameters are posted to the checkout as-is, which is how a caller
+    // reaches XPay features the plugin does not model — num_contratto and
+    // tipo_servizio to store the card for later, urlpost, and so on.
+    Map<String, String> extra = call.argument("extraParameters");
+    if (extra != null) {
+      for (Map.Entry<String, String> entry : extra.entrySet()) {
+        request.addExtraKey(entry.getKey(), entry.getValue());
+      }
+    }
+    return request;
+  }
+
+  /**
+   * Charges a card already stored against a contract, with no checkout UI.
+   *
+   * <p>The contract is created by sending num_contratto/tipo_servizio as extra parameters on a
+   * normal payment; from then on XPay can charge it without the customer present.
+   */
+  private void payRecurring(MethodCall call, final Result result) {
+    if (xPay == null || activity == null) {
+      result.error("NOT_INITIALIZED", "XPay is not initialized. Call initXPay first.", null);
+      return;
+    }
+    String alias = call.argument("alias");
+    String contractId = call.argument("contractId");
+    String codTrans = call.argument("codTrans");
+    Number amount = call.argument("amount");
+    if (alias == null || contractId == null || codTrans == null || amount == null) {
+      result.error("INVALID_REQUEST",
+              "alias, contractId, codTrans and amount are required", null);
+      return;
+    }
+
+    ApiPagamentoRicorrenteRequest request = new ApiPagamentoRicorrenteRequest(
+            alias, contractId, codTrans, amount.longValue(), CurrencyUtils.EUR);
+
+    xPay.Ricorrenze.pagamentoRicorrente(request,
+            new ApiResponseCallback<ApiPagamentoRicorrenteResponse>() {
+              @Override
+              public void onSuccess(ApiPagamentoRicorrenteResponse response) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("isSuccess", true);
+                map.put("authCode", response.getAuthCode());
+                map.put("operationId", response.getOperationId());
+                map.put("brand", response.getBrand());
+                map.put("date", response.getDate());
+                map.put("time", response.getTime());
+                result.success(map);
+              }
+
+              @Override
+              public void onError(ApiErrorResponse error) {
+                // A refused charge is an outcome, not a crash: it comes back as a result
+                // with isSuccess false so callers handle it like any other decline.
+                Map<String, Object> map = new HashMap<>();
+                map.put("isSuccess", false);
+                if (error != null && error.getError() != null) {
+                  map.put("errorCode", error.getError().getCode());
+                  map.put("errorMessage", error.getError().getMessage());
+                }
+                result.success(map);
+              }
+            });
   }
 
   @Override
