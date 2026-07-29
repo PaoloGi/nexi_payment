@@ -1,3 +1,20 @@
+## 2.2.0
+
+* **FIX (Android, classic gateway): the checkout always reports an outcome.**
+  XPaySDK's `BaseWebViewActivity.onBackPressed` only calls `WebView.goBack()`
+  or `Activity.onBackPressed()`, so leaving the checkout with the system back
+  button never invoked `FrontOfficeCallbackQP`: `xPayFrontOfficePaga` stayed
+  pending forever and every later payment was refused with `IN_PROGRESS` until
+  the app restarted. The plugin now watches the SDK's checkout screens and, if
+  the last one disappears without the SDK reporting anything, resolves with
+  `NexiPayment.canceledByUser` — the same result the payment page's own cancel
+  link produces. A real outcome always wins: callbacks clear the pending
+  result before delivering, and a grace period leaves room for one already on
+  its way, so a completed payment and the 3DS step are unaffected.
+  * This removes the documented limitation that told you to add your own
+    timeout. Both gateways now guarantee that the returned future completes,
+    on both platforms.
+
 ## 2.1.0
 
 * **FIX (important): a failed NPG payment is no longer reported as a success.**

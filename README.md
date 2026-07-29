@@ -102,14 +102,17 @@ On Android, lower-level SDK failures may additionally surface through the native
 SDK's own `onError` callback, carrying the SDK's own error code — so treat the
 table above as the common cases, not a closed set.
 
-> **Known limitation (Android, classic gateway only).** If the user leaves the
-> checkout with the system **back button**, XPaySDK finishes its WebView
-> Activity without invoking its own callback, so `xPayFrontOfficePaga` never
-> completes. Cancelling through the cancel link on Nexi's payment page works
-> normally and returns `"Operation canceled by the user"`. Until Nexi fixes
-> this in the SDK, do not rely on the returned future alone to decide an
-> order's fate — treat your server-side notification as the source of truth,
-> and consider a timeout in your UI. The NPG gateway is unaffected.
+`xPayFrontOfficePaga` always completes, whichever way the user leaves the
+checkout. That takes a little help from the plugin on Android: XPaySDK
+finishes its WebView Activity on the system **back button** without invoking
+its own callback, so the plugin watches the checkout's lifecycle and resolves
+with `NexiPayment.canceledByUser` when it disappears having said nothing —
+the same result the cancel link on Nexi's payment page produces. A real
+outcome always wins; the fallback only fills the SDK's silence.
+
+> As always, the client result tells you what the user saw. Treat your
+> server-side notification as the source of truth for whether an order is
+> paid.
 
 <img src="https://raw.githubusercontent.com/PaoloGi/nexi_payment/master/android_screen_1.jpg" width="400">
 

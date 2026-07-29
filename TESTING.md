@@ -110,13 +110,12 @@ patrol test --dart-define=NPG_HOSTNAME=your-host.nexigroup.com \
   terminal. If the SDK cannot start its Activity the app process dies and this
   test fails — which is exactly how the `androidx.webkit` "Unknown feature
   PAYMENT_REQUEST" regression was caught.
-- A second test asserting that dismissing the checkout with the **back button**
-  reports an outcome is **skipped on purpose**: it fails today.
-  `BaseWebViewActivity.onBackPressed` in XPaySDK only calls `WebView.goBack()`
-  or `Activity.onBackPressed()` and never invokes `FrontOfficeCallbackQP`, so
-  the Dart future stays pending forever. Cancelling through the payment page's
-  own cancel link works (the SDK detects its `urlBack` navigation). Un-skip it
-  if Nexi fixes the SDK.
+- **Dismissing the checkout with the back button reports a cancel**, and the
+  plugin is usable afterwards. `BaseWebViewActivity.onBackPressed` in XPaySDK
+  only calls `WebView.goBack()` or `Activity.onBackPressed()` and never
+  invokes `FrontOfficeCallbackQP`, which used to leave the Dart future pending
+  forever; the plugin now watches the checkout's lifecycle and fills that
+  silence. This test was skipped until that fix landed.
 
 `integration_test/example_app_test.dart`
 
@@ -147,15 +146,12 @@ So, for a test that opens a checkout:
 
 ### Deliberately not asserted
 
-The **classic** dismissal test asserts only that a result arrives and is *not*
-success: what XPaySDK reports for a dismissed checkout is its own choice, and
-pinning it would make the suite brittle without testing anything we control.
-
-NPG is different — there the plugin decides, so its dismissal test pins the
-outcome to `canceled` on both platforms and then starts another payment to
-prove the plugin is not stuck. That combination is the regression guard for the
-2.1.0 iOS fix, where dismissing the sheet left the future pending forever and
-every later payment refused with `IN_PROGRESS`.
+Both dismissal tests now pin the outcome, because in both cases the *plugin*
+decides rather than the SDK: NPG reports `canceled` when its checkout goes away
+silently (the 2.1.0 iOS fix), and the classic gateway does the same when the
+back button closes its Activity without a callback (the 2.2.0 Android fix).
+Each test then starts another payment and asserts it is not refused with
+`IN_PROGRESS`, which is the half that catches a plugin left stuck.
 
 ---
 
@@ -184,7 +180,15 @@ provisioned by Nexi and its key generated in the merchant back office
 |---|---|---|---|---|
 | Visa | 4509 0345 4361 5006 | 10/2028 | 298 | success |
 | Mastercard | 5100 9908 1789 6004 | 04/2027 | 301 | success |
-| Visa | 4349 9401 9999 7007 | 12/2028 | 829 | failure |
+| Visa | 4539 9700 0000 0014 | 12/2030 | any 3 digits | failure |
+
+The failure card above is from Nexi's own test-card reference (ecommerce.nexi.it
+test area → **Carte Test**), verified live against the classic checkout. An
+older card that circulated here, `4349 9401 9999 7007`, does **not** actually
+decline on the classic gateway — it authorizes like a success card — so don't
+reuse it. For NPG, the outcome is decided by the 3DS challenge button
+(**AUTENTICAZIONE RIUSCITA** / **FALLITA**), not the card number, so any card
+from Nexi's test list works for both success and failure there.
 
 ### Checklist
 

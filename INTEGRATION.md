@@ -28,7 +28,7 @@ app if you happen to have both.
 
 ```yaml
 dependencies:
-  nexi_payment: ^2.1.0
+  nexi_payment: ^2.2.0
 ```
 
 ### Android
@@ -116,12 +116,14 @@ rejected.
 
 ### 2.3 Read this before you ship
 
-On Android, leaving the checkout with the **system back button** never resolves
-the future — XPaySDK closes its WebView without calling its own callback. See
-the limitation note in [README.md](README.md). Practical consequences:
+`xPayFrontOfficePaga` always completes — including on Android when the user
+leaves with the **system back button**, which XPaySDK itself does not report
+(the plugin watches the checkout's lifecycle and resolves with
+`NexiPayment.canceledByUser`). Still:
 
-- Don't block your UI forever on the returned future; add a timeout.
-- Confirm the order server-side rather than trusting the client result.
+- Confirm the order server-side rather than trusting the client result. The
+  client tells you what the user saw; your server-to-server notification tells
+  you whether you were paid.
 
 ---
 
@@ -230,7 +232,11 @@ Nexi's test cards (both gateways):
 |---|---|---|---|---|
 | Visa | 4509 0345 4361 5006 | 10/2028 | 298 | success |
 | Mastercard | 5100 9908 1789 6004 | 04/2027 | 301 | success |
-| Visa | 4349 9401 9999 7007 | 12/2028 | 829 | failure |
+| Visa | 4539 9700 0000 0014 | 12/2030 | any 3 digits | failure |
+
+For NPG, the outcome is decided by the 3DS challenge button (**AUTENTICAZIONE
+RIUSCITA** / **FALLITA**), not the card number — any card from the list above
+works for both success and failure there.
 
 Run through, on a real device for each platform:
 
@@ -261,7 +267,7 @@ Run through, on a real device for each platform:
 | `INVALID_CREDENTIALS` from NPG, immediately | `hostname` includes `https://` or a path, or `apiKey` is not a UUID. Use a bare host. |
 | iOS: `No such module 'XPaySDK'` | The frameworks were not fetched — `pod install` needs network on first run. Re-run it; check `ios/Frameworks/` is populated. |
 | Android: crash on opening the checkout, `Unknown feature PAYMENT_REQUEST` | An `androidx.webkit` older than 1.14.0 has been forced into your build. XPaySDK needs >= 1.14.0. |
-| Classic payment never returns (Android) | The user pressed the system back button — a known SDK limitation, see §2.3. |
+| Classic payment never returns (Android) | Fixed in 2.2.0: the back button now resolves with `NexiPayment.canceledByUser`. On an older version, upgrade. |
 | `NOT_INITIALIZED` | Payment called before init finished. Await the payment call rather than firing it during widget construction. |
 | Build fails on minSdk | The NPG SDK requires 23; raise `minSdkVersion`. |
 | `flutter build aar` fails | Not supported: the Nexi `.aar`s resolve through `flatDir`. Build the app directly. |
