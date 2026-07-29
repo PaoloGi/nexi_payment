@@ -84,7 +84,9 @@ patrol test --target integration_test/npg_gateway_test.dart
 
 # against your own NPG terminal instead of Nexi's public sandbox
 patrol test --dart-define=NPG_HOSTNAME=your-host.nexigroup.com \
-            --dart-define=NPG_API_KEY=your-uuid-key
+            --dart-define=NPG_API_KEY=your-uuid-key \
+            --dart-define=XPAY_ALIAS=your-alias \
+            --dart-define=XPAY_SECRET_KEY=your-mac-key
 ```
 
 ### What they assert
@@ -162,8 +164,10 @@ Things that need a human. Run these before publishing a release.
 ### Credentials
 
 Classic XPay (from ecommerce.nexi.it → your test terminal): alias, MAC
-calculation key (this is the `secretKey`), terminal group. The example app has
-a working test alias and key hardcoded in `example/lib/main.dart`.
+calculation key (this is the `secretKey`), terminal group. The example app
+takes both at run time via `--dart-define=XPAY_ALIAS` and
+`--dart-define=XPAY_SECRET_KEY`; nothing real is committed, so supply your own.
+Treat the MAC key like a password even on a test terminal.
 
 NPG: hostname and X-Api-Key. Nexi publishes a shared sandbox terminal on the
 [test environment page](https://developer.nexigroup.com/xpayglobal/en-EU/docs/test-environment/);
@@ -197,7 +201,9 @@ Run on **both** Android and iOS, in debug and release:
 ```bash
 cd example
 flutter run --dart-define=NPG_HOSTNAME=stg-ta.nexigroup.com \
-            --dart-define=NPG_API_KEY=5d952446-9004-4023-9eae-a527a152846b
+            --dart-define=NPG_API_KEY=5d952446-9004-4023-9eae-a527a152846b \
+            --dart-define=XPAY_ALIAS=your-alias \
+            --dart-define=XPAY_SECRET_KEY=your-mac-key
 ```
 
 Classic gateway (**PAY**):

@@ -28,7 +28,7 @@ app if you happen to have both.
 
 ```yaml
 dependencies:
-  nexi_payment: ^2.2.0
+  nexi_payment: ^2.3.0
 ```
 
 ### Android
@@ -114,7 +114,65 @@ import the `models/` files separately.
 `codTrans` must be unique for every attempt. Reusing one gets the transaction
 rejected.
 
-### 2.3 Read this before you ship
+### 2.3 Store a card and charge it later (optional)
+
+If you need subscriptions, or "pay with the card I used last time", XPay can
+keep the card against a contract id you choose. The customer enters it once, in
+Nexi's checkout; later charges need no checkout at all.
+
+Store it by adding two parameters to a normal payment:
+
+```dart
+await nexi.xPayFrontOfficePaga(
+  yourAlias,
+  orderId,
+  CurrencyUtilsQP.EUR,
+  2500,
+  extraParameters: {
+    'num_contratto': contractId,     // yours to choose; must not already exist
+    'tipo_servizio': 'paga_multi',   // "store this card"
+  },
+);
+```
+
+Then charge it whenever you like, with nobody present:
+
+```dart
+final result = await nexi.xPayRecurringPayment(
+  alias: yourAlias,
+  contractId: contractId,
+  codTrans: nextOrderId,   // still unique per attempt
+  amount: 999,
+);
+
+if (result.isSuccess) {
+  // result.authCode, result.operationId, result.brand, result.date/time
+} else {
+  // result.errorCode, result.errorMessage — a refusal, not an exception
+}
+```
+
+Only configuration problems throw; a declined card comes back as a result with
+`isSuccess == false`.
+
+Two things will bite you if you skip them:
+
+- **`num_contratto` must be brand new each time you store a card.** XPay
+  rejects a duplicate by dead-ending the checkout on an "operazione non andata
+  a buon fine" page the back button cannot leave — the payment neither
+  completes nor cancels, and the user has to kill the app. Generate and persist
+  one id per stored card.
+- **`xPayRecurringPayment` needs your `secretKey` wherever it runs.** In an app,
+  that key ships to every device, and it authorises charges against every card
+  you have stored. If you have a backend, make recurring charges there. Call it
+  from the app only when the app really is the whole product and you have
+  accepted that trade-off.
+
+`extraParameters` is handed to XPay untouched, so the same map carries anything
+else the gateway accepts — `urlpost`, `mail`, `descrizione` — without waiting
+for the plugin to model it.
+
+### 2.4 Read this before you ship
 
 `xPayFrontOfficePaga` always completes — including on Android when the user
 leaves with the **system back button**, which XPaySDK itself does not report
@@ -256,7 +314,7 @@ Run through, on a real device for each platform:
 - [ ] Neither credential is hardcoded in the shipped binary.
 - [ ] Orders are settled from server-side notifications, not the client result.
 - [ ] `notificationUrl` points at production and is reachable from Nexi's IPs.
-- [ ] Your UI handles a payment that never resolves (see §2.3).
+- [ ] Your UI handles a payment that never resolves (see §2.4).
 
 ---
 
@@ -272,3 +330,4 @@ Run through, on a real device for each platform:
 | Build fails on minSdk | The NPG SDK requires 23; raise `minSdkVersion`. |
 | `flutter build aar` fails | Not supported: the Nexi `.aar`s resolve through `flatDir`. Build the app directly. |
 | NPG payment succeeds but your order stays unpaid | You are relying on the in-app result. Wire up `notificationUrl` (§3.4). |
+| Classic checkout dead-ends on "operazione non andata a buon fine", back button does nothing | The `num_contratto` you sent already exists. Use a fresh id for every card you store (§2.3). |

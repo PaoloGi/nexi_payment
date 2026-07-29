@@ -1,3 +1,29 @@
+## 2.3.0
+
+* **NEW: store a card and charge it later (closes #2).** Two additions, and
+  together they are the "subsequent payments without re-entering card details"
+  that issue #2 asked for in 2021:
+  * `xPayFrontOfficePaga` takes an optional `extraParameters` map, passed to
+    XPay's checkout untouched. Sending `num_contratto` and `tipo_servizio`
+    there stores the card against a contract; it also reaches anything else
+    XPay accepts, such as `urlpost`, `mail` or `descrizione`.
+  * `xPayRecurringPayment(alias:contractId:codTrans:amount:)` charges a stored
+    contract with no checkout and no customer present, returning a typed
+    `XpayRecurringResult`. A refusal is a result with `isSuccess == false` and
+    XPay's error code, not an exception; only configuration problems throw.
+  * Both native SDKs supported this all along — the plugin simply never wired
+    it up. The old Dart `extraKeys` field was serialized into the channel and
+    then dropped on the floor, which is why passing it appeared to do nothing.
+  * **Where this runs matters.** A recurring charge moves money with no user
+    present, so an app calling it must carry your `secretKey`, and anyone who
+    unpacks that app can charge every card you have stored. With a backend,
+    make recurring charges there. See the note in README.
+* The example app no longer hardcodes classic XPay credentials: it reads
+  `XPAY_ALIAS` and `XPAY_SECRET_KEY` from `--dart-define`, like the NPG ones,
+  with placeholder defaults. Previous releases shipped a real test terminal's
+  MAC key inside `example/`, and the comments now spell out that neither
+  hardcoding nor `--dart-define` is safe for a production key.
+
 ## 2.2.0
 
 * **FIX (Android, classic gateway): the checkout always reports an outcome.**

@@ -118,6 +118,54 @@ outcome always wins; the fallback only fills the SDK's silence.
 
 <img src="https://raw.githubusercontent.com/PaoloGi/nexi_payment/master/android_screen_2.jpg" width="400">
 
+### Storing a card and charging it later
+
+Pass XPay's contract parameters on a normal payment and Nexi keeps the card,
+so later charges need no card entry and no checkout:
+
+```dart
+// 1. First payment — the customer enters the card once, in Nexi's checkout.
+await nexi.xPayFrontOfficePaga(
+  alias, codTrans, CurrencyUtilsQP.EUR, 2500,
+  extraParameters: {
+    'num_contratto': 'customer-42-card-1',   // an id you choose — see below
+    'tipo_servizio': 'paga_multi',           // store the card
+  },
+);
+
+// 2. Any later charge — no UI, no customer present.
+final result = await nexi.xPayRecurringPayment(
+  alias: alias,
+  contractId: 'customer-42-card-1',
+  codTrans: nextUniqueCodTrans,
+  amount: 999,
+);
+if (result.isSuccess) { /* result.authCode */ }
+else { /* result.errorCode, result.errorMessage */ }
+```
+
+A refusal is a normal result with `isSuccess == false` carrying XPay's
+`errorCode` and `errorMessage`, not an exception; only configuration problems
+throw.
+
+> **`num_contratto` must be new every time you store a card.** XPay refuses one
+> that already exists, and it refuses it badly: the checkout dead-ends on an
+> "operazione non andata a buon fine" page that the back button cannot leave,
+> so the payment neither completes nor cancels and the user has to kill the
+> app. Generate a fresh id per stored card — one per customer, or per card —
+> and persist it. Reusing the id is for *charging* (step 2), never for storing.
+
+`extraParameters` is passed to the checkout untouched, so it also carries
+anything else XPay accepts — `urlpost` for your server-to-server notification,
+`mail`, `descrizione` — without the plugin needing to model each one.
+
+> **Think about where step 2 runs.** It moves money with no user present, so
+> an app that calls it must carry your `secretKey` — and anyone who unpacks
+> that app can then charge every card you have stored. If you have a backend,
+> make recurring charges there and keep the key off the device. Use
+> `xPayRecurringPayment` when the app genuinely is the whole product and you
+> accept that trade-off knowingly.
+
 ## NPG gateway (Hosted Payment Page)
 
 For merchants on the new Nexi gateway (developer.nexigroup.com). Import the
